@@ -4,7 +4,7 @@ folder1='/Users/AleCac/Documents/Python_stuff/';
 %Input: enter the last stamp of the track_output files (a list if more than
 %one is present)
 
-cell_folder_list={'T=31.3C.19Aug2016_01.19.39'};
+cell_folder_list={'RheoDataFree.csv'};
 
 listlen=length(cell_folder_list);
 
@@ -17,7 +17,7 @@ FFT=0;
 %Input: microrheo param
 Dbead=1.2e-6;
 kB = 1.3806503 * 1E-23;
-Temp = 273+31;
+Temp = 273+25;
 t_0=1e-1;
 t_end=50;
 
