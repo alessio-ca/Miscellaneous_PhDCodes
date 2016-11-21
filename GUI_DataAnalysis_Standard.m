@@ -171,7 +171,7 @@ for frame=1:listlen
         pos{frame}(:,1)=pos{frame}(:,1)*1/fps;
         pos{frame}=pos{frame}(1:floor(length(pos{frame})/4),:);
         dlmwrite([fullpath,'MSD_',filename],pos{frame}, 'delimiter', ',', 'precision', 9);
-    elseif MSD == 0s
+    elseif MSD == 0
         continue
     else
         error('Wrong MSD parameter!')

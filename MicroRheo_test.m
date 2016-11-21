@@ -120,7 +120,7 @@ for frame=1:listlen
         maxfreq=fps/(2*resfreq);
         omega=resfreq*logspace(log10(minfreq),log10(maxfreq));
         oversample_tau=(1/(Beta*fps):1/(Beta*fps):tau_downsample(end));
-       
+       %%
 
         %Enable progress bar for parallel pool
         try
