@@ -61,6 +61,10 @@ looprep='A';
 filter_indic=1;
 lastframe=0;
 
+disp(' ')
+disp(['Tracking active with step max ',num2str(step_max)]);
+disp(' ')
+
 %Tracking loop
 while(frame<=last)
     
@@ -93,8 +97,8 @@ while(frame<=last)
     peakint=max(c(:));
     
     % If peak location is too close to edges (less than filter/2 length), assign peak pos randomly
-    if all([ypeak,xpeak]-[floor(size(norm,2)/2),floor(size(norm,1)/2)]>0)==0 || all([size(image,1),size(image,2)]-[ypeak,xpeak]>[floor(size(norm,2)/2),floor(size(norm,1)/2)])==0
-        fake=floor(floor(max(size(norm,1)/2,size(norm,2)/2)) + floor(min(size(image,1),size(image,2))-max(size(norm,1)/2,size(norm,2)/2))*rand(1,2));
+    if all([ypeak,xpeak]-[floor(size(norm,2)/2),floor(size(norm,1)/2)]>0)==0 || all([size(c,1),size(c,2)]-[ypeak,xpeak]>[floor(size(norm,2)/2),floor(size(norm,1)/2)])==0
+        fake=floor(floor(max(size(norm,1)/2,size(norm,2)/2)) + floor(min(size(c,1),size(c,2))-max(size(norm,1)/2,size(norm,2)/2))*rand(1,2));
         ypeak=fake(1);
         xpeak=fake(2);
     end

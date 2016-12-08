@@ -40,7 +40,7 @@ listlen = length(dir([folder_name,'/','*.tiff']));
 %Input: by default, the program process all the pictures. Modify the 2nd
 %and 3rd field if necessary
 
-poslist=AnalyseTrack([folder_name,'/',stamp,'_'],1,listlen-1,filter,r_max*2,10); %The listlen-1 accounts for one frame being 00000
+poslist=AnalyseTrack([folder_name,'/',stamp,'_'],1,listlen-1,filter,r_max*2,20); %The listlen-1 accounts for one frame being 00000
 
 %Input: by default, the program will create an output file in the mother
 %directory. Modify if necessary

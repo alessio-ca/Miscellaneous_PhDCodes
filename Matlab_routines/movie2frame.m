@@ -183,9 +183,17 @@ if found
         if (camera_frame(4)==CAMERA_PIXELMODE_MONO_8)
             [data,~]=fread(fileID,[size_x,size_y],'uint8');
             data=uint8(data);
-        else
-            [data,~]=fread(fileID,[size_x,size_y],'uint16');
-            data=uint16(data);
+       else
+            [data,~]=fread(fileID,2*size_x*size_y,'*uint8');
+            if (camera_frame(4)==CAMERA_PIXELMODE_MONO_16BE)
+                for ii=1:2:2*size_x*size_y
+                    c = data(ii);
+                    data(ii) = data(ii+1);
+                    data(ii+1) = c;
+                end
+            end
+            data=typecast(data,'uint16');
+            data=reshape(data,[size_x,size_y]);
         end
         
         %Store video in the 3D array
@@ -196,7 +204,6 @@ if found
         index=index+1;
         [camera_frame,msg]=fread(fileID,6,'uint32','l');
     end
-    
     %Closure conditions
     index=index-1;
     if index < nfr

@@ -114,9 +114,16 @@ if found
                 [data,msg]=fread(fileID,[size_x,size_y],'uint8');
                 data=uint8(data);
             else
+                %NEED TO BE TESTED FOR 16BIT IMAGES!!!
                 bpp=2;
-                [data,msg]=fread(fileID,[size_x,size_y],'uint16');
-                data=uint16(data);
+                [data,msg]=fread(fileID,[2*size_x,size_y],'uint8');
+                data=uint8(data);
+                if (camera_frame(4)==CAMERA_PIXELMODE_MONO_16BE)
+                    for ii=1:2:2*size_x*size_y
+                        [data(ii), data(ii+1)] = deal(data(ii+1), data(ii));
+                    end
+                end
+                data=reshape(data,[2*size_x,2*size_y],'uint8');
             end
             if msg~=size_x*size_y
                 offset=ftell(fileID);

@@ -1,11 +1,13 @@
 %Input: enter mother directory name (it must end with a "\" sign)
-folder1='/Users/AleCac/Documents/Python_stuff/';
+folder1='C:\Users\ac2014\Documents\MATLAB\Git-MATLAB\Data_Microrheology\';
 
 %Input: enter the last stamp of the track_output files (a list if more than
 %one is present)
 
 cell_folder_list={'60x_1.20_Si02_1000FPS_1.5um_Tweezer_G_0.05.13Aug2016_15.27.31'};
-cell_folder_list={'Simulation_1000FPS_Kel_1e-6_D_2e-6'};
+%1.2 is found to be best for log-sampling param
+%cell_folder_list={'Simulation_1000FPS_Kel_1e-6_D_2e-6'};
+%1.25 is found to be best for log-sampling param
 
 listlen=length(cell_folder_list);
 
@@ -13,10 +15,12 @@ listlen=length(cell_folder_list);
 fps=1000;
 
 %Input: FFT calculation
-FFT=0;
+FFT=1;
 
 %Input: microrheo param
-Dbead=2e-6;
+Dbead=1.5e-6;
+%Dbead=2e-6;
+
 kB = 1.3806503 * 1E-23;
 Temp = 298;
 
@@ -51,7 +55,17 @@ for frame=1:listlen
     rheofactor=rheofactor./(3*pi*Dbead);
     [acfx,~,~,~] = acf(1/fps,traj(:,2));
     [acfy,tau,~,~] = acf(1/fps,traj(:,3));
+    
+    idx=find(acfx<0, 1 );
+    idy=find(acfy<0, 1 );
+    xx=smooth(acfx(idx:end),length(acfx)/100);
+    yy=smooth(acfy(idy:end),length(acfy)/100);
+    acfxfiltered=[acfx(1:idx-1);xx];
+    acfyfiltered=[acfy(1:idy-1);yy];
 
+    
+
+    
     maxlag=max(length(tau)-50000,50);
     maxlag=min(floor(length(tau)/4),maxlag);
     %Log sampling
@@ -59,36 +73,37 @@ for frame=1:listlen
     res=1;
     while (interval < maxlag/4)
         res=res+1;
-        interval=ceil(1.45^res);
+        interval=ceil(1.2^res);
     end
     res=res-1;
-    interval=ceil(1.45.^(0:res));
-    
+    interval=ceil(1.2.^(0:res));
     
     plotinterval=unique(floor(logspace(0,log10(maxlag),1000)));
     %Cut-off (if present)
-    taucutoff=1;
+    taucutoff=2;
     interval=interval(tau(interval)<taucutoff);
     tau_downsample=tau(interval);
-    acfx_downsample=acfx(interval);
-    acfy_downsample=acfy(interval);
-    acfx_spline=csape(tau_downsample,acfx_downsample,'second');
-    acfy_spline=csape(tau_downsample,acfy_downsample,'second');
+    acfx_downsample=acfxfiltered(interval);
+    acfy_downsample=acfyfiltered(interval);
+    acfx_spline=csape(tau_downsample,acfx_downsample);
+    acfy_spline=csape(tau_downsample,acfy_downsample);
     
     %Plotting section
     figure(1)
     ax1=subplot(2,2,1);
-    semilogx(tau(plotinterval,:),acfx(plotinterval,:),'o')
+    semilogx(tau(plotinterval),acfx(plotinterval),'o')
     hold on
+    semilogx(tau(plotinterval),acfxfiltered(plotinterval),'o')
     semilogx(tau_downsample,acfx_downsample,'s','MarkerEdgeColor','k','MarkerFaceColor',[0 0 1],'MarkerSize',10)
     semilogx(tau_downsample,fnval(tau_downsample,acfx_spline),'--k');
-    xlabel('Frequency(Hz)')
+    xlabel('Time (s)')
     ylabel('A(t)')
     hold off
     
     ax2=subplot(2,2,3);
     semilogx(tau(plotinterval,:),acfy(plotinterval,:),'o');
     hold on
+    semilogx(tau(plotinterval),acfyfiltered(plotinterval),'o')
     semilogx(tau_downsample,acfy_downsample,'s','MarkerEdgeColor','k','MarkerFaceColor',[0 0 1],'MarkerSize',10)
     semilogx(tau_downsample,fnval(tau_downsample,acfy_spline),'--k');
     xlabel('Time (s)')
@@ -113,13 +128,63 @@ for frame=1:listlen
     elseif FFT==1
         
         Beta=5000;
+%         [Corrx,~]=CoarseGrainACF(traj(:,2),1000,1000,100,100);
+%         [Corry,Times]=CoarseGrainACF(traj(:,3),1000,1000,100,100);
+%                 
+%         %Log sampling
+%         interval=1;
+%         res=1;
+%         while (interval < Times(end))
+%             res=res+1;
+%             interval=ceil(1.45^res);
+%         end
+%         res=res-1;
+%         interval=ceil(1.45.^(0:res));
+%         maxlag=max(Times(Corrx~=0));
+%         
+%         taucutoff=10;
+%         
+%         tmp=abs(repmat(Times,1,length(interval))-repmat(interval/fps,length(Times),1));
+%         [~, idx] = min(tmp); %index of closest value
+%         interval=idx;
+%         interval=interval(Times(interval)<taucutoff);
+%         acfx_downsample=Corrx(interval);
+%         acfy_downsample=Corry(interval);
+%         tau_downsample=Times(interval);
+%         acfx_spline=csape(tau_downsample,acfx_downsample);
+%         acfy_spline=csape(tau_downsample,acfy_downsample);
+%         
+%         
+%         %Plotting section
+%         figure(1)
+%         ax1=subplot(2,2,1);
+%         semilogx(Times(Times<maxlag),Corrx(Times<maxlag),'o')
+%         hold on
+%         semilogx(tau_downsample,acfx_downsample,'s','MarkerEdgeColor','k','MarkerFaceColor',[0 0 1],'MarkerSize',10)
+%         semilogx(tau_downsample,fnval(tau_downsample,acfx_spline),'--k');
+%         xlabel('Time (s)')
+%         ylabel('A(t)')
+%         hold off
+%         
+%         ax2=subplot(2,2,3);
+%         semilogx(Times(Times<maxlag),Corry(Times<maxlag),'o');
+%         hold on
+%         semilogx(tau_downsample,acfy_downsample,'s','MarkerEdgeColor','k','MarkerFaceColor',[0 0 1],'MarkerSize',10)
+%         semilogx(tau_downsample,fnval(tau_downsample,acfy_spline),'--k');
+%         xlabel('Time (s)')
+%         ylabel('A(t)')
+%         hold off
+%         
+%         linkaxes([ax1,ax2],'x')
+        
         
         %THERE IS AN ERROR HERE!!!!
         resfreq=fps/length(tau);
         minfreq=1/(resfreq*tau_downsample(end));
         maxfreq=fps/(2*resfreq);
         omega=resfreq*logspace(log10(minfreq),log10(maxfreq));
-        oversample_tau=(1/(Beta*fps):1/(Beta*fps):tau_downsample(end));
+        %oversample_tau=(1/(Beta*fps):1/(Beta*fps):tau_downsample(end));
+        oversample_tau=unique(logspace(log10(1/(Beta*fps)),log10(tau_downsample(end)),Beta*fps*tau_downsample(end)));
        %%
 
         %Enable progress bar for parallel pool

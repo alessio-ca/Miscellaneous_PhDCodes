@@ -40,7 +40,7 @@ else
 end
 
 if nargin < 4
-    step_max=5;
+    step_max=5; %Default step max
 end
 
 if nargin < 3
@@ -54,10 +54,12 @@ loop=0;
 looprep='A';
 filter_indic=1;
 lastframe=0;
-
-
+frame=1;
+disp(' ')
+disp(['Tracking active with step max ',num2str(step_max)]);
+disp(' ')
 %Tracking loop
-for frame=1:size(file,1)
+while(frame<=size(file,1))
     
     if mod(frame,1000)==0
         if frame ~= lastframe
@@ -87,7 +89,7 @@ for frame=1:size(file,1)
     
     % If peak location is too close to edges (less than filter/2 length), assign peak pos randomly
     if all([ypeak,xpeak]-[floor(size(norm,2)/2),floor(size(norm,1)/2)]>0)==0 || all([size(c,1),size(c,2)]-[ypeak,xpeak]>[floor(size(norm,2)/2),floor(size(norm,1)/2)])==0
-        fake=floor(floor(max(size(norm,1)/2,size(norm,2)/2)) + floor(min(size(image,1),size(image,2))-max(size(norm,1)/2,size(norm,2)/2))*rand(1,2));
+        fake=floor(floor(max(size(norm,1)/2,size(norm,2)/2)) + floor(min(size(c,1),size(c,2))-max(size(norm,1)/2,size(norm,2)/2))*rand(1,2));
         ypeak=fake(1);
         xpeak=fake(2);
     end
@@ -237,7 +239,8 @@ for frame=1:size(file,1)
     if stepdist > step_max || peakint<0.6 || looprep=='N'
         pos_list(end,:)=[];
         filter_indic=0;
-    end    
+    end
+    frame=frame+1;
 end
 %To have full compatibility with other data analysis routines, frames that
 %were unsucessful in tracking are padded with zero
