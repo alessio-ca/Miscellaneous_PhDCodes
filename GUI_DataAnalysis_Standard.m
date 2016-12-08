@@ -200,5 +200,4 @@ if MSD==1
     set(gca,'xscale','log');
     set(gca,'yscale','log');
 end
-%%
 

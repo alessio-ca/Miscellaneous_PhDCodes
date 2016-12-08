@@ -1,40 +1,176 @@
-%Input: enter mother directory name (it must end with a "\" sign)
-folder1='C:\Users\ac2014\Documents\MATLAB\Git-MATLAB\Data_Microrheology\';
+%This routine calculates the visco-elastic modulus G* from position series
+%of single bead(s). It employs a position autocorrelation (ACF) calculation
+%with subsequent conversion to G moduli via a Fourier Transform routine for
+%non-equally spaced points. For a description of the trategy, see Tassieri
+%et al. (2012).
 
-%Input: enter the last stamp of the track_output files (a list if more than
-%one is present)
+%The procedure is as follows:
+%   1) The data series is converted into the ACF.
+%   2) The ACF is sampled at logaritmic points to reduce the stastical
+%      noise at large lag times.
+%   3) A natural cubic spline is fitted to the log-sampled ACF.
+%   4) A largeer, oversampled ACF is obtained via the spline fit.
+%   5) The oversampled ACF is Fourier-Transformed to obtain G*.
 
-cell_folder_list={'60x_1.20_Si02_1000FPS_1.5um_Tweezer_G_0.05.13Aug2016_15.27.31'};
-%1.2 is found to be best for log-sampling param
-%cell_folder_list={'Simulation_1000FPS_Kel_1e-6_D_2e-6'};
-%1.25 is found to be best for log-sampling param
+%Some tecnical details:
+%   - The ACF tail is improved via a smoothing procedure (shown in plots)
+%   - The ACF log-sampling has a very high impact on the Gp
+%     appearance at high frequencies. Recommended range is 1+ < logsampling
+%     < 1.5, but you may want to play with the parameter for better-looking
+%     results.
+%   - The oversampling factor (Beta) is typically chosen so that Beta*fps
+%     is roughly 5 MHz. Values higher than that are reported not to yield
+%     better results (see Tassieri et al., (2012)).
+%   - The FFT calculation is optional. If FFT is activated, the program 
+%   - will save the generated FFT-ACF in an output file. If you wish to
+%     just use the calculated FFT-ACF for data 
+%     ACF in an output file if 
+%   - Parallelization is used to speed-up the FT operation. If a parallel
+%     pool is not already active, switching it ON may require some time.
+%     Please DON'T PANIC! It's normal, everything is gonna be alright.
+%   - The code is optimized and makes heavy use of vectorization. If you
+%     (for some obscure reason) find yourself memory-constrained (99% of
+%     the times it is because your oversampled ACF is too big -> reduce
+%     that damn Beta and log-sample!), you can split the X and Y analysis
+%     and do them serially. The code will be slower, but you can free up
+%     memory used in the FT operation.
+%   - The code loads a track_output*.csv file. It then looks for either
+%     linked or dedrifted versions (a.k.a. post-processed data). If it does not
+%     find them, it prompt you post-process your raw data. If you need to,
+%     you CAN modify the routine to accept also raw data BUT DO IT IF YOU
+%     KNOW WHAT YOU ARE DOING. THE CODE WANTS TO BE PEDAGOGICAL IN
+%     PROMPTING YOU TO POST-PROCESS YOUR DATA BEFORE DOING MICRORHEOLOGY.
+%     Post-processed data can avoid very nasty problems such as
+%     code-crashing beacuse of some bad raw data or data with drift, with
+%     consequent bullshit/like G* values. 
+%     
+%     REMEMBER: 
+%     MICRORHEOLOGY IS AN ART, LIKE MUSIC. YOU CAN'T PLAY JAZZ IF YOU DON'T 
+%     FIRST REFINE YOUR SKILLS. SAME HERE: YOU CAN'T DO MICRORHEOLOGY IF 
+%     YOU DON'T HAVE APPROPRIATELY CLEAN DATA.
 
-listlen=length(cell_folder_list);
 
-%Input: enter frame rate
-fps=1000;
+%Input: enter the last stamp of the track_output files. It can be list if more than
+%one is present, but they must refer to same global settings (such as bead
+%diameter, temperature, etc.).
+out=uipickfiles('FilterSpec','track_particle_output*.csv','Output','Struct');
+stamp=cell(1,length(out));
+for i = 1:length(out)
+    [fullpath,stamp{i},~]=fileparts(out(i).name);
+end
+fullpath=[fullpath,'/'];
+if ~iscell(stamp)
+    cell_folder_list={stamp};
+end
+listlen=length(stamp);
 
-%Input: FFT calculation
-FFT=1;
+%Input: enter frame rate, bead diameter, temperature (in °C) and
+%log-sampling parameter.
+%Set security commands for wrong user input
+loop=-1;
+while loop<=0
+    loop=input('Insert frame rate (fps): ');
+    if loop>0
+        fps=loop;
+    else
+        disp('Incorrect input from user.')
+        loop = -1;
+    end
+end
+loop=-1;
+while loop<=0
+    loop=input('Insert bead diameter (in um): ');
+    if loop>0
+        Dbead=loop*1e-6;
+    else
+        disp('Incorrect input from user.')
+        loop = -1;
+    end
+end
+while loop<=0
+    loop=input('Insert temperature (in °C): ');
+    if loop>0
+        Temperature=loop+273;
+    else
+        disp('Incorrect input from user.')
+        loop = -1;
+    end
+end
+loop=-1;
+while loop<=0
+    loop=input('Insert coarse graining factor: ');
+    if loop>0
+        CG=loop;
+        if loop<=1 
+            disp('CG factor must be > 1')
+            loop=-1;
+        end
+    else
+        disp('Incorrect input from user.')
+        loop = -1;
+    end
+end
+%Input: FFT calculation (1 for yes, 0 for no)
+loop=2;
+while (loop ~= 0) && (loop ~= 1)
+    loop=input('FFT calculation (0 for no, 1 for yes): ');
+    if ~isscalar(loop)
+        loop = 2;
+    end
+    if loop==1 || loop==0
+        FFT=loop;
+    else
+        disp('Incorrect input from user.')
+        loop = 2;
+    end
+end
 
-%Input: microrheo param
-Dbead=1.5e-6;
-%Dbead=2e-6;
+%If FFT calculation is activated, the following parameters are also
+%required:
+if FFT ==1
+    %Input: insert oversampling factor. 
+    %Set security commands for wrong user input
+    loop=-1;
+    while loop<=0
+        loop=input('Insert oversampling factor: ');
+        if loop>0
+            Beta=loop;
+        else
+            disp('Incorrect input from user.')
+            loop = -1;
+        end
+    end
+    %Input: insert time cut-off (set it to 0 if you don't want any time cut-off)
+    %Set security commands for wrong user input
+    loop=-1;
+    while loop<0
+        loop=input('Insert time cut-off (set it to 0 if not needed): ');
+        if loop>=0
+            taucutoff=loop;
+        else
+            disp('Incorrect input from user.')
+            loop = -1;
+        end
+    end
+end
+
+
+
 
 kB = 1.3806503 * 1E-23;
-Temp = 298;
 
 
 close all
+disp(' ')
 %%
 for frame=1:listlen
-    filename=['track_particle_output',char(cell_folder_list(frame)),'.csv'];
-    try traj=dlmread([folder1,'De-drifted_',filename],',');
+    filename=[char(stamp(frame)),'.csv'];
+    try traj=dlmread([fullpath,'De-drifted_',filename],',');
         disp('De-drifted trajectory file found.')
     catch ME
         if strcmp(ME.identifier,'MATLAB:dlmread:FileNotOpened')
             disp('De-drifted trajectory file not found. Proceeding with un-drifted...')
-            try traj=dlmread([folder1,'Linked_',filename],',');
+            try traj=dlmread([fullpath,'Linked_',filename],',');
                 traj(:,4)=[];
                 traj=circshift(traj,[0 1]);
                 disp('Linked trajectory file found.')
@@ -58,8 +194,8 @@ for frame=1:listlen
     
     idx=find(acfx<0, 1 );
     idy=find(acfy<0, 1 );
-    xx=smooth(acfx(idx:end),length(acfx)/100);
-    yy=smooth(acfy(idy:end),length(acfy)/100);
+    xx=smooth(acfx(idx:end),6*fps);
+    yy=smooth(acfy(idy:end),6*fps);
     acfxfiltered=[acfx(1:idx-1);xx];
     acfyfiltered=[acfy(1:idy-1);yy];
 
@@ -73,20 +209,22 @@ for frame=1:listlen
     res=1;
     while (interval < maxlag/4)
         res=res+1;
-        interval=ceil(1.2^res);
+        interval=ceil(CG^res);
     end
     res=res-1;
-    interval=ceil(1.2.^(0:res));
+    interval=ceil(CG.^(0:res));
     
     plotinterval=unique(floor(logspace(0,log10(maxlag),1000)));
-    %Cut-off (if present)
-    taucutoff=2;
-    interval=interval(tau(interval)<taucutoff);
+    if taucutoff>0
+        interval=interval(tau(interval)<taucutoff);
+    end
     tau_downsample=tau(interval);
     acfx_downsample=acfxfiltered(interval);
     acfy_downsample=acfyfiltered(interval);
     acfx_spline=csape(tau_downsample,acfx_downsample);
     acfy_spline=csape(tau_downsample,acfy_downsample);
+    disp('ACF calculation done.')
+    disp(' ')
     
     %Plotting section
     figure(1)
@@ -95,7 +233,9 @@ for frame=1:listlen
     hold on
     semilogx(tau(plotinterval),acfxfiltered(plotinterval),'o')
     semilogx(tau_downsample,acfx_downsample,'s','MarkerEdgeColor','k','MarkerFaceColor',[0 0 1],'MarkerSize',10)
-    semilogx(tau_downsample,fnval(tau_downsample,acfx_spline),'--k');
+    h=semilogx(tau_downsample,fnval(tau_downsample,acfx_spline),'--k');
+    set(get(get(h,'Annotation'),'LegendInformation'),'IconDisplayStyle','off');
+    legend('ACF','Smooth ACF','Log-sampling','Location','northeast')
     xlabel('Time (s)')
     ylabel('A(t)')
     hold off
@@ -105,18 +245,18 @@ for frame=1:listlen
     hold on
     semilogx(tau(plotinterval),acfyfiltered(plotinterval),'o')
     semilogx(tau_downsample,acfy_downsample,'s','MarkerEdgeColor','k','MarkerFaceColor',[0 0 1],'MarkerSize',10)
-    semilogx(tau_downsample,fnval(tau_downsample,acfy_spline),'--k');
+    h=semilogx(tau_downsample,fnval(tau_downsample,acfy_spline),'--k');
+    set(get(get(h,'Annotation'),'LegendInformation'),'IconDisplayStyle','off');
+    legend('ACF','Smoothened ACF','Log-sampling','Location','northeast')
     xlabel('Time (s)')
     ylabel('A(t)')
     hold off
     
     linkaxes([ax1,ax2],'x')
 
-    
-
     %%
     if FFT==0
-        try acf_fft=dlmread([folder1,'FFT-ACF_',filename],',');
+        try fft_acf=dlmread([fullpath,'FFT-ACF_',filename],',');
             disp('FFT-ACF file found.')
         catch ME
             if strcmp(ME.identifier,'MATLAB:dlmread:FileNotOpened')
@@ -126,16 +266,14 @@ for frame=1:listlen
             end
         end
     elseif FFT==1
-        
-        Beta=5000;
+                
         resfreq=fps/length(tau);
         minfreq=1/(resfreq*tau_downsample(end));
         maxfreq=fps/(2*resfreq);
-        omega=resfreq*logspace(log10(minfreq),log10(maxfreq));
-        %oversample_tau=(1/(Beta*fps):1/(Beta*fps):tau_downsample(end));
-        oversample_tau=unique(logspace(log10(1/(Beta*fps)),log10(tau_downsample(end)),Beta*fps*tau_downsample(end)));
-       %%
-
+        omega=resfreq*logspace(log10(minfreq),log10(maxfreq))';
+        oversample_tau=(1/(Beta*fps):1/(Beta*fps):tau_downsample(end))';
+        
+        %%
         %Enable progress bar for parallel pool
         try
             parpool;
@@ -148,63 +286,43 @@ for frame=1:listlen
         pctRunOnAll javaaddpath java
         progressStep=ceil(length(omega)/100);
         
-        %X analysis
-        disp('Analysis of X direction in progress...')
-        oversample_acf=fnval(oversample_tau,acfx_spline);
+        %Analysis section
+        disp('FT Analysis in progress...')
+        oversample_acf(:,1)=fnval(oversample_tau,acfx_spline);
+        oversample_acf(:,2)=fnval(oversample_tau,acfy_spline);
         
-        fft_acf = 1i*2*pi*omega;
-        fft_acf = fft_acf + (1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1)-1)/oversample_tau(1);
+        fft_acf = repmat(1i*2*pi*omega,1,2);
+        sum_point=[(1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1,1)-1)/oversample_tau(1),(1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1,2)-1)/oversample_tau(1)];
+        fft_acf = fft_acf + initial_point;
         ppm = ParforProgMon('Progress: ', length(omega), progressStep, 300, 80);
         
         parfor i=1:length(omega)
-            fft_acf(i)=fft_acf(i)-sum(diff(exp(-1i*2*pi*omega(i)*oversample_tau)).*diff(oversample_acf)./diff(oversample_tau));
+            sum_point=[sum(diff(exp(-1i*2*pi*omega(i)*oversample_tau)).*diff(oversample_acf(:,1))./diff(oversample_tau)),sum(diff(exp(-1i*2*pi*omega(i)*oversample_tau)).*diff(oversample_acf(:,2))./diff(oversample_tau))];
+            fft_acf(i,:)=fft_acf(i,:)-sum_point;
             if mod(i,progressStep)==0
                 ppm.increment();
             end
         end
         ppm.delete()
         clear oversample_acf
-        acf_fft = [omega',real(fft_acf)',imag(fft_acf)'];
-        acf_fft(:,2) = acf_fft(:,2)./(-4*pi*pi*acf_fft(:,1).^2);
-        acf_fft(:,3) = acf_fft(:,3)./(-4*pi*pi*acf_fft(:,1).^2);
-        clear fft_acf
-
-        %Y analysis
-        disp('Analysis of Y direction in progress...')
-        oversample_acf=fnval(oversample_tau,acfy_spline);
+        fft_acf = [omega,real(fft_acf),imag(fft_acf)];
+        fft_acf(:,2:3) = fft_acf(:,2:3)./repmat(-4*pi*pi*fft_acf(:,1).^2,1,2);
+        fft_acf(:,4:5) = fft_acf(:,4:5)./repmat(-4*pi*pi*fft_acf(:,1).^2,1,2);
         
-        fft_acf = 1i*omega*2*pi;
-        fft_acf = fft_acf + (1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1)-1)/oversample_tau(1);
-        ppm = ParforProgMon('Progress: ', length(omega), progressStep, 300, 80);
-        
-        parfor i=1:length(omega)
-            fft_acf(i) = fft_acf(i)-sum(diff(exp(-1i*2*pi*omega(i)*oversample_tau)).*diff(oversample_acf)./diff(oversample_tau));
-            if mod(i,progressStep)==0
-                ppm.increment();
-            end
-        end
-        ppm.delete()
-        clear oversample_tau 
-        clear oversample_acf
-        acf_fft(:,4:5) = [real(fft_acf)',imag(fft_acf)'];
-        acf_fft(:,4)=acf_fft(:,4)./(-4*pi*pi*acf_fft(:,1).^2);
-        acf_fft(:,5)=acf_fft(:,5)./(-4*pi*pi*acf_fft(:,1).^2);
-        clear fft_acf
-        
-        dlmwrite([folder1,'FFT-ACF_',filename],acf_fft, 'delimiter', ',', 'precision', 9);
+        dlmwrite([fullpath,'FFT-ACF_',filename],fft_acf, 'delimiter', ',', 'precision', 9);
     else
         error('Wrong FFT parameter!')
     end
-    acf_fft(:,[2,4])=-acf_fft(:,[2,4]);
-    acf_fft(:,[3,5])=-(acf_fft(:,[3,5]) + 1./(2*pi*acf_fft(:,[1,1])));
+    fft_acf(:,2:3)=-fft_acf(:,2:3);
+    fft_acf(:,4:5)=-(fft_acf(:,4:5) + 1./repmat(2*pi*fft_acf(:,1),1,2));
     
-    ampl=acf_fft(:,[2,4]).^2 + acf_fft(:,[3,5]).^2;
-    omega=acf_fft(:,1);
-    Gpx = -rheofactor(1)*(acf_fft(:,3)./(2*pi*acf_fft(:,1).*ampl(:,1))); %Uncorrected for trap for visualization purposes
-    Gppx = -rheofactor(1)*acf_fft(:,2)./(2*pi*acf_fft(:,1).*ampl(:,1));
-    Gpy = -rheofactor(2)*(acf_fft(:,5)./(2*pi*acf_fft(:,1).*ampl(:,2))); %Uncorrected for trap for visualization purposes
-    Gppy = -rheofactor(2)*acf_fft(:,4)./(2*pi*acf_fft(:,1).*ampl(:,2));
-    clear acf_fft
+    fft_acf(:,6:7)=fft_acf(:,2:3).^2 + fft_acf(:,4:5).^2;
+    omega=fft_acf(:,1);
+    Gpx = -rheofactor(1).*fft_acf(:,2)./(2*pi*fft_acf(:,1).*fft_acf(:,6)); %Uncorrected for trap for visualization purposes
+    Gpy = -rheofactor(2).*fft_acf(:,3)./(2*pi*fft_acf(:,1).*fft_acf(:,7)); %Uncorrected for trap for visualization purposes
+    Gppx = -rheofactor(1).*fft_acf(:,4)./(2*pi*fft_acf(:,1).*fft_acf(:,6)); 
+    Gppy = -rheofactor(2).*fft_acf(:,5)./(2*pi*fft_acf(:,1).*fft_acf(:,7));
+    clear fft_acf
     %%
     ax3=subplot(2,2,2);
     loglog(omega,Gpx,'*')
@@ -227,7 +345,7 @@ for frame=1:listlen
     legend('G''','G''''',['Trap: ',num2str(rheofactor(2),3),' Pa'],'Location','northwest')
     linkaxes([ax3,ax4],'x')
     
-    dlmwrite([folder1,'Gmoduli_',filename],[omega,Gpx,Gpy,Gppx,Gppy], 'delimiter', ',', 'precision', 9);
+    dlmwrite([fullpath,'Gmoduli_',filename],[omega,Gpx,Gpy,Gppx,Gppy], 'delimiter', ',', 'precision', 9);
 
 
 end

@@ -1,5 +1,5 @@
 %Input: enter mother directory name (it must end with a "\" sign)
-folder1='C:\Users\ac2014\Documents\MATLAB\Git-MATLAB\Data_Microrheology\';
+folder1='/Users/AleCac/Documents/MATLAB/Git-MATLAB/Data_Microrheology/';
 
 %Input: enter the last stamp of the track_output files (a list if more than
 %one is present)
@@ -116,7 +116,7 @@ for frame=1:listlen
 
     %%
     if FFT==0
-        try acf_fft=dlmread([folder1,'FFT-ACF_',filename],',');
+        try fft_acf=dlmread([folder1,'FFT-ACF_',filename],',');
             disp('FFT-ACF file found.')
         catch ME
             if strcmp(ME.identifier,'MATLAB:dlmread:FileNotOpened')
@@ -128,63 +128,12 @@ for frame=1:listlen
     elseif FFT==1
         
         Beta=5000;
-%         [Corrx,~]=CoarseGrainACF(traj(:,2),1000,1000,100,100);
-%         [Corry,Times]=CoarseGrainACF(traj(:,3),1000,1000,100,100);
-%                 
-%         %Log sampling
-%         interval=1;
-%         res=1;
-%         while (interval < Times(end))
-%             res=res+1;
-%             interval=ceil(1.45^res);
-%         end
-%         res=res-1;
-%         interval=ceil(1.45.^(0:res));
-%         maxlag=max(Times(Corrx~=0));
-%         
-%         taucutoff=10;
-%         
-%         tmp=abs(repmat(Times,1,length(interval))-repmat(interval/fps,length(Times),1));
-%         [~, idx] = min(tmp); %index of closest value
-%         interval=idx;
-%         interval=interval(Times(interval)<taucutoff);
-%         acfx_downsample=Corrx(interval);
-%         acfy_downsample=Corry(interval);
-%         tau_downsample=Times(interval);
-%         acfx_spline=csape(tau_downsample,acfx_downsample);
-%         acfy_spline=csape(tau_downsample,acfy_downsample);
-%         
-%         
-%         %Plotting section
-%         figure(1)
-%         ax1=subplot(2,2,1);
-%         semilogx(Times(Times<maxlag),Corrx(Times<maxlag),'o')
-%         hold on
-%         semilogx(tau_downsample,acfx_downsample,'s','MarkerEdgeColor','k','MarkerFaceColor',[0 0 1],'MarkerSize',10)
-%         semilogx(tau_downsample,fnval(tau_downsample,acfx_spline),'--k');
-%         xlabel('Time (s)')
-%         ylabel('A(t)')
-%         hold off
-%         
-%         ax2=subplot(2,2,3);
-%         semilogx(Times(Times<maxlag),Corry(Times<maxlag),'o');
-%         hold on
-%         semilogx(tau_downsample,acfy_downsample,'s','MarkerEdgeColor','k','MarkerFaceColor',[0 0 1],'MarkerSize',10)
-%         semilogx(tau_downsample,fnval(tau_downsample,acfy_spline),'--k');
-%         xlabel('Time (s)')
-%         ylabel('A(t)')
-%         hold off
-%         
-%         linkaxes([ax1,ax2],'x')
         
-        
-        %THERE IS AN ERROR HERE!!!!
         resfreq=fps/length(tau);
         minfreq=1/(resfreq*tau_downsample(end));
         maxfreq=fps/(2*resfreq);
-        omega=resfreq*logspace(log10(minfreq),log10(maxfreq));
-        %oversample_tau=(1/(Beta*fps):1/(Beta*fps):tau_downsample(end));
-        oversample_tau=unique(logspace(log10(1/(Beta*fps)),log10(tau_downsample(end)),Beta*fps*tau_downsample(end)));
+        omega=resfreq*logspace(log10(minfreq),log10(maxfreq))';
+        oversample_tau=(1/(Beta*fps):1/(Beta*fps):tau_downsample(end))';
        %%
 
         %Enable progress bar for parallel pool
@@ -199,63 +148,43 @@ for frame=1:listlen
         pctRunOnAll javaaddpath java
         progressStep=ceil(length(omega)/100);
         
-        %X analysis
-        disp('Analysis of X direction in progress...')
-        oversample_acf=fnval(oversample_tau,acfx_spline);
+        %Analysis section
+        disp('Analysis in progress...')
+        oversample_acf(:,1)=fnval(oversample_tau,acfx_spline);
+        oversample_acf(:,2)=fnval(oversample_tau,acfy_spline);
         
-        fft_acf = 1i*2*pi*omega;
-        fft_acf = fft_acf + (1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1)-1)/oversample_tau(1);
+        fft_acf = repmat(1i*2*pi*omega,1,2);
+        sum_point=[(1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1,1)-1)/oversample_tau(1),(1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1,2)-1)/oversample_tau(1)];
+        fft_acf = fft_acf + initial_point;
         ppm = ParforProgMon('Progress: ', length(omega), progressStep, 300, 80);
         
         parfor i=1:length(omega)
-            fft_acf(i)=fft_acf(i)-sum(diff(exp(-1i*2*pi*omega(i)*oversample_tau)).*diff(oversample_acf)./diff(oversample_tau));
+            sum_point=[sum(diff(exp(-1i*2*pi*omega(i)*oversample_tau)).*diff(oversample_acf(:,1))./diff(oversample_tau)),sum(diff(exp(-1i*2*pi*omega(i)*oversample_tau)).*diff(oversample_acf(:,2))./diff(oversample_tau))];
+            fft_acf(i,:)=fft_acf(i,:)-sum_point;
             if mod(i,progressStep)==0
                 ppm.increment();
             end
         end
         ppm.delete()
         clear oversample_acf
-        acf_fft = [omega',real(fft_acf)',imag(fft_acf)'];
-        acf_fft(:,2) = acf_fft(:,2)./(-4*pi*pi*acf_fft(:,1).^2);
-        acf_fft(:,3) = acf_fft(:,3)./(-4*pi*pi*acf_fft(:,1).^2);
-        clear fft_acf
-
-        %Y analysis
-        disp('Analysis of Y direction in progress...')
-        oversample_acf=fnval(oversample_tau,acfy_spline);
+        fft_acf = [omega,real(fft_acf),imag(fft_acf)];
+        fft_acf(:,2:3) = fft_acf(:,2:3)./repmat(-4*pi*pi*fft_acf(:,1).^2,1,2);
+        fft_acf(:,4:5) = fft_acf(:,4:5)./repmat(-4*pi*pi*fft_acf(:,1).^2,1,2);
         
-        fft_acf = 1i*omega*2*pi;
-        fft_acf = fft_acf + (1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1)-1)/oversample_tau(1);
-        ppm = ParforProgMon('Progress: ', length(omega), progressStep, 300, 80);
-        
-        parfor i=1:length(omega)
-            fft_acf(i) = fft_acf(i)-sum(diff(exp(-1i*2*pi*omega(i)*oversample_tau)).*diff(oversample_acf)./diff(oversample_tau));
-            if mod(i,progressStep)==0
-                ppm.increment();
-            end
-        end
-        ppm.delete()
-        clear oversample_tau 
-        clear oversample_acf
-        acf_fft(:,4:5) = [real(fft_acf)',imag(fft_acf)'];
-        acf_fft(:,4)=acf_fft(:,4)./(-4*pi*pi*acf_fft(:,1).^2);
-        acf_fft(:,5)=acf_fft(:,5)./(-4*pi*pi*acf_fft(:,1).^2);
-        clear fft_acf
-        
-        dlmwrite([folder1,'FFT-ACF_',filename],acf_fft, 'delimiter', ',', 'precision', 9);
+        dlmwrite([folder1,'FFT-ACF_',filename],fft_acf, 'delimiter', ',', 'precision', 9);
     else
         error('Wrong FFT parameter!')
     end
-    acf_fft(:,[2,4])=-acf_fft(:,[2,4]);
-    acf_fft(:,[3,5])=-(acf_fft(:,[3,5]) + 1./(2*pi*acf_fft(:,[1,1])));
+    fft_acf(:,2:3)=-fft_acf(:,2:3);
+    fft_acf(:,4:5)=-(fft_acf(:,4:5) + 1./repmat(2*pi*fft_acf(:,1),1,2));
     
-    ampl=acf_fft(:,[2,4]).^2 + acf_fft(:,[3,5]).^2;
-    omega=acf_fft(:,1);
-    Gpx = -rheofactor(1)*(acf_fft(:,3)./(2*pi*acf_fft(:,1).*ampl(:,1))); %Uncorrected for trap for visualization purposes
-    Gppx = -rheofactor(1)*acf_fft(:,2)./(2*pi*acf_fft(:,1).*ampl(:,1));
-    Gpy = -rheofactor(2)*(acf_fft(:,5)./(2*pi*acf_fft(:,1).*ampl(:,2))); %Uncorrected for trap for visualization purposes
-    Gppy = -rheofactor(2)*acf_fft(:,4)./(2*pi*acf_fft(:,1).*ampl(:,2));
-    clear acf_fft
+    fft_acf(:,6:7)=fft_acf(:,2:3).^2 + fft_acf(:,4:5).^2;
+    omega=fft_acf(:,1);
+    Gpx = -rheofactor(1).*fft_acf(:,2)./(2*pi*fft_acf(:,1).*fft_acf(:,6)); %Uncorrected for trap for visualization purposes
+    Gpy = -rheofactor(2).*fft_acf(:,3)./(2*pi*fft_acf(:,1).*fft_acf(:,7)); %Uncorrected for trap for visualization purposes
+    Gppx = -rheofactor(1).*fft_acf(:,4)./(2*pi*fft_acf(:,1).*fft_acf(:,6)); 
+    Gppy = -rheofactor(2).*fft_acf(:,5)./(2*pi*fft_acf(:,1).*fft_acf(:,7));
+    clear fft_acf
     %%
     ax3=subplot(2,2,2);
     loglog(omega,Gpx,'*')
