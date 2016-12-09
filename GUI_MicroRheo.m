@@ -87,10 +87,11 @@ while loop<=0
         loop = -1;
     end
 end
+loop=-1;
 while loop<=0
     loop=input('Insert temperature (in °C): ');
     if loop>0
-        Temperature=loop+273;
+        Temp=loop+273;
     else
         disp('Incorrect input from user.')
         loop = -1;
@@ -292,7 +293,7 @@ for frame=1:listlen
         oversample_acf(:,2)=fnval(oversample_tau,acfy_spline);
         
         fft_acf = repmat(1i*2*pi*omega,1,2);
-        sum_point=[(1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1,1)-1)/oversample_tau(1),(1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1,2)-1)/oversample_tau(1)];
+        initial_point=[(1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1,1)-1)/oversample_tau(1),(1-exp(-1i*2*pi*omega*oversample_tau(1)))*(oversample_acf(1,2)-1)/oversample_tau(1)];
         fft_acf = fft_acf + initial_point;
         ppm = ParforProgMon('Progress: ', length(omega), progressStep, 300, 80);
         
