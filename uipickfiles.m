@@ -180,7 +180,7 @@ end
 if isempty(prop.append)
 	file_picks = {};
 	full_file_picks = {};
-	dir_picks = dir(' ');  % Create empty directory structure.
+    dir_picks = repmat(dir(char(127)),0,1); % Create empty directory structure.
 elseif iscellstr(prop.append) && isvector(prop.append)
 	num_items = length(prop.append);
 	file_picks = cell(1,num_items);
