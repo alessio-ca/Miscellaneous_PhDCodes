@@ -24,7 +24,7 @@ function [Corr,G]=CoarseGrainMicroRheo(datax,datay,fps,P,M,S)
 %Typical parameter choice:
 %P=16;
 %M=2;
-%S=5;
+%S=20;
 if M < 2
     error('M must be > 2')
 end

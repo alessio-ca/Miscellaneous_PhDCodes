@@ -7,7 +7,7 @@ function [omega,Gp,Gpp]=FouEvans(tau,data,fps,f0,fpinf,cutoff)
 
 %Parameters:
 %tau is the time vector
-%data is the f(t) vector (contains x(t) and y(t))
+%data is the f(t) vector (contains ACFx(t) and ACFy(t))
 %f0 is the value f(0) (need to be the same for x(t) and y(t))
 %fpinf is the gradient of f extrapolated to infinite time (need to be the
 %same for x(t) and y(t)).
