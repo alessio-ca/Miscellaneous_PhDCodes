@@ -12,6 +12,7 @@ classdef Ray
     % Ray methods:
     %   Ray             -   constructor
     %   plot            -   plots ray set in 3D
+    %   plotnopol       -   plots ray set in 3D without pol
     %   disp            -   prints ray set
     %   translate       -   3D translation
     %   xrotation       -   rotation around x-axis
@@ -88,6 +89,74 @@ classdef Ray
             else
                 hold on
                     h = [r.v.plot(varargin{:}); r.pol.plot(varargin{:})];
+                hold off
+            end
+            
+            for n = 1:2:length(varargin)
+                set(h,varargin{n},varargin{n+1});
+            end
+        end
+        function h = plotnopol(r,varargin)
+            % PLOT Plots ray set in 3D without polarization
+            %
+            % H = PLOTNOPOL(R) plots the set of rays R in 3D. It returns a
+            %   graphic handler to the plotted set of rays.
+            %
+            % H = PLOTNOPOL(R,'Scale',S) rescales the coordinates and components 
+            %   of the vectors v by S before plotting them. 
+            %
+            % H = PLOTNOPOL(R,'Scale',[S1 S2]) rescales the coordinates of the vectors v
+            %   by S1 and its components by S2 before plotting them. 
+            %
+            % H = PLOTNOPOL(R,'PropertyName',PropertyValue) sets the property
+            %   PropertyName to PropertyValue. All standard plot properties
+            %   can be used.
+            %
+            % See also Ray.
+
+            if ishold()
+                h = r.v.plot(varargin{:});
+            else
+                hold on
+                    h = r.v.plot(varargin{:});
+                hold off
+            end
+            
+            for n = 1:2:length(varargin)
+                set(h,varargin{n},varargin{n+1});
+            end
+        end
+        function h = plotnopolnorm(r,s,varargin)
+            % PLOT Plots ray set in 3D without polarization
+            % Rays are normalized so that the incident ones go to the first
+            % intersection point with a sphere s.
+            % If no intersection is found, normalization is set to 1.
+            %
+            % H = PLOTNOPOLNORM(R) plots the set of rays R in 3D. It returns a
+            %   graphic handler to the plotted set of rays.
+            %
+            %
+            % H = PLOTNOPOLNORM(R,'PropertyName',PropertyValue) sets the property
+            %   PropertyName to PropertyValue. All standard plot properties
+            %   can be used.
+            %
+            % See also Ray.
+            
+            Check.isa('Object must be a spherical surface',s,'Superficies') 
+            p = s.intersectionpoint(r,1); %First intersection point
+            p2 = s.intersectionpoint(r,2);
+            pin = Point(r.v.X(:)',r.v.Y(:)',r.v.Z(:)');
+            Sfac = norm(minus(p,pin));
+            Sfac2 = norm(minus(p2,pin));
+            Sfac(Sfac < s.r*1e-3) = Sfac2(Sfac < s.r*1e-3);
+            rscaled=Sfac.*r.v.versor;
+            
+            
+            if ishold()
+                h = rscaled.plot(varargin{:});
+            else
+                hold on
+                    h = rscaled.plot(varargin{:});
                 hold off
             end
             

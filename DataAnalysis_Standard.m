@@ -1,9 +1,7 @@
 %Input: enter the last stamp of the track_output files (a list if more than
 %one is present)
-[cell_folder_list,fullpath]=uigetfile('*.csv','MultiSelect','on');
-cell_folder_list=strrep(cell_folder_list,'track_particle_output','');
-cell_folder_list=strrep(cell_folder_list,'track_particle_output','');
-cell_folder_list=strrep(cell_folder_list,'.csv','');
+fullpath='/Users/AleCac/Documents/MATLAB/Git-MATLAB/Data_Microrheology/';
+cell_folder_list={'60x_1.20_Si02_1000FPS_1.5um_Tweezer_G_0.05.13Aug2016_15.27.31'};
 
 listlen=length(cell_folder_list);
 
@@ -14,8 +12,9 @@ umPerPixel=0.1425;
 %Input: drift correction order (-1 for no drift correction)
 drift=1;
 %Input: MSD calculation (1 for yes, 0 for no)
-MSD=1;
-
+MSD=0;
+%Input: Allan variance calculation (1 for yes, 0 for no)
+allvar=1;
 
 close all
 clear pos
@@ -122,7 +121,7 @@ for frame=1:listlen
             disp('MSD file found.')
          catch ME
             if strcmp(ME.identifier,'MATLAB:dlmread:FileNotOpened')
-                disp('MSD file not found!')
+                disp('MSD file not found! MSD will not be displayed.')
             else
                 rethrow(ME)
             end
@@ -130,6 +129,26 @@ for frame=1:listlen
     else
         error('Wrong MSD parameter!')
     end
+    
+    if allvar == 1
+        disp('Calculating Allan variances...')
+        avar{frame}=allan(linked(:,1),fps,logspace(log10(1/fps),log10((1/fps)*length(linked(:,1)))));
+        dlmwrite([fullpath,'Allan_',filename],avar{frame}, 'delimiter', ',', 'precision', 9);
+    elseif allvar == 0
+        try avar{frame}=dlmread(['Allan_',filename],',');
+            disp('Allan file found.')
+        catch ME
+            if strcmp(ME.identifier,'MATLAB:dlmread:FileNotOpened')
+                disp('Allan file not found! Allan will not be displayed.')
+            else
+                rethrow(ME)
+            end
+        end
+    else
+        error('Wrong Allan parameter!')
+    end
+    
+    
     
     clear data
     clear linkedcopy
@@ -154,4 +173,18 @@ if MSD==1
     set(gca,'yscale','log');
 end
 %%
-
+if allvar==1
+    figure(3)
+    hold on
+    for frame=1:listlen
+        x=avar{frame}(:,1);
+        y=avar{frame}(:,2);
+        loglog(x,y,'o');
+        ylabel('Allan variance (um^{2})')
+        xlabel('Time (s)')
+    end
+    hold off
+    title(['Allan variance plot'])
+    set(gca,'xscale','log');
+    set(gca,'yscale','log');
+end
