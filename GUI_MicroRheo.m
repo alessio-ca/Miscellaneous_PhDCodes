@@ -214,7 +214,7 @@ for frame=1:listlen
     end
     res=res-1;
     interval=ceil(CG.^(0:res));
-    
+    interval=unique(interval);
     plotinterval=unique(floor(logspace(0,log10(maxlag),1000)));
     if taucutoff>0
         interval=interval(tau(interval)<taucutoff);

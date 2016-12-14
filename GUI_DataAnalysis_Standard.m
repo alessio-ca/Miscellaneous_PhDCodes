@@ -8,7 +8,6 @@ if length(cell_folder_list)==1
         error('Canceled operation.')
     end
 end
-
 if ~iscell(cell_folder_list)
     cell_folder_list={cell_folder_list};
 end
