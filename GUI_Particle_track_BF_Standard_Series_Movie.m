@@ -55,7 +55,7 @@ for i=1:length(list)
     offset=0;
     img=squeeze(movie2frame(filename,offset,1));
     if  i==1
-        [filter_list{1},r_max]=CreateFilter(img);
+        [filter_list{1,1},filter_list{1,2},r_max]=CreateFilter(img);
     end
     
     
@@ -66,10 +66,10 @@ for i=1:length(list)
     %2) Insert nfr as a third argument of all the subsequent calls to
     %   movie2frame
     [video,offset,nfr]=movie2frame(filename,offset);
-    [poslist,filter_list]=AnalyseTrack_Movie(video,filter_list,r_max*2,100);
+    [poslist,filter_list]=AnalyseTrack_Movie(video,filter_list,r_max*2,10);
     [video,offset,nfr]=movie2frame(filename,offset);
     while length(video)>1
-        [poslist,filter_list]=AnalyseTrack_Movie(video,filter_list,r_max*2,100,poslist);
+        [poslist,filter_list]=AnalyseTrack_Movie(video,filter_list,r_max*2,10,poslist);
         [video,offset,nfr]=movie2frame(filename,offset);
     end
     
@@ -106,6 +106,7 @@ for i=1:length(list)
     xlabel('Time step')
     ylabel('Pixel')
     legend('X coordinate','Y coordinate')
+    drawnow
     
     fprintf('\n')
 end
