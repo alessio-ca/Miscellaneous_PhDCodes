@@ -9,7 +9,7 @@ if isempty(selectedFiles)
 end
 filenames={selectedFiles.name};
 for i=1:length(filenames)
-   movie2tiff_func(filenames{1});
+   movie2tiff_func(filenames{i});
 end
 
 

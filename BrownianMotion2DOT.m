@@ -8,7 +8,7 @@ eta = 0.001; %Viscosity
 T = 300; %Temperature
 k = [1e-6 1e-6]; %Trap elastic constant
 r_eq = [0 0]; %Trap Equilibrium position
-N = 1e+5; %Number of steps
+N = 5e+4; %Number of steps
 
 r0 = [0 0]; %Initial position
 
@@ -28,8 +28,9 @@ r(1,:) = r0;
 t = (0:1:N-1)'*dt;
 
 
-% Simulation
-% It simulates a 
+% Main loop
+% It simulates a Brownian Particle in a solvent according to the overdamped
+% Langevin equation. 
 for n = 2:1:N
     r(n,:) = C1.*r(n-1,:) + C2 + hs(n,:);
     if mod(n,10000)==0
@@ -37,3 +38,6 @@ for n = 2:1:N
     end
 end
 
+tic
+msd_routine(dt,r);
+toc
