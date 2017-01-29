@@ -171,7 +171,7 @@ classdef EField
             %   at positions R (Point).
             %   S and DxLS are a ComplexVector.
             %
-            % S = S(EF,R,'dr',DR) sets the increment in the calcualtion of
+            % LS = LS(EF,R,'dr',DR) sets the increment in the calcualtion of
             %   the derivatives to DR [default = 1e-12 m]. 
             %
             % See also EField, Point, ComplexVector.
