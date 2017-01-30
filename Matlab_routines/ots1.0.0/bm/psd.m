@@ -60,7 +60,7 @@ ft_vec = dt*fft(Vx);
 psd_vec = ft_vec.*conj(ft_vec)/T;
 
 fNyq = fs/2; % Nyquist frequency
-f = [1:1:size(Vx)]'/T;
+f = (1:1:size(Vx))'/T;
 
 % Only data up to the Nyquist frequency
 % and between fmin and fmax
@@ -76,7 +76,7 @@ psd_err = std(psd_vec,0,2);
 if strcmpi(blocking,'lin')
     
     % Centers of bins
-    binscenters = [fmin:(fmax-fmin)/binsnumber:fmax];
+    binscenters = (fmin:(fmax-fmin)/binsnumber:fmax);
     
     % Widths of Bins
     binswidths(1) = (binscenters(2)-binscenters(1))/2;
@@ -102,7 +102,7 @@ if strcmpi(blocking,'lin')
 elseif strcmpi(blocking,'log')
 
     % Centers of bins
-    binscenters = [log(fmin):(log(fmax)-log(fmin))/binsnumber:log(fmax)];
+    binscenters = (log(fmin):(log(fmax)-log(fmin))/binsnumber:log(fmax));
     binscenters = exp(binscenters);
     
     % Widths of Bins

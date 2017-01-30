@@ -8,7 +8,7 @@ eta = 0.001; %Viscosity
 T = 300; %Temperature
 k = [1e-6 1e-6]; %Trap elastic constant
 r_eq = [0 0]; %Trap Equilibrium position
-N = 5e+4; %Number of steps
+N = 1e+5; %Number of steps
 
 r0 = [0 0]; %Initial position
 
@@ -38,6 +38,7 @@ for n = 2:1:N
     end
 end
 
+parpool;
 tic
 msd_routine(dt,r);
 toc
