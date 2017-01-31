@@ -2,13 +2,13 @@ close all; clc;
 
 %Parameter declaration
 
-dt = 1e-3; %Time step
+dt = 1e-6; %Time step
 R = 1e-6; %Radius of bead
 eta = 0.001; %Viscosity
 T = 300; %Temperature
-k = [1e-6 1e-6 1e-7]; %Trap elastic constant
+k = [5e-5 5e-5 5e-6]; %Trap elastic constant
 r_eq = [0 0 0]; %Trap Equilibrium position
-N = 1e+5; %Number of steps
+N = 10e+6; %Number of steps
 
 r0 = [0 0 0]; %Initial position
 

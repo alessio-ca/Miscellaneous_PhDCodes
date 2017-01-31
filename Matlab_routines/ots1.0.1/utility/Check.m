@@ -7,8 +7,10 @@ classdef Check
     %   isreal          -   (Static) Validate real number
     %   isinteger       -   (Static) Validate integer number
     %   isa             -   (Static) Validate object class
+    %   samedim         -   (Static) Validate same number
 
 	%   Author: Giovanni Volpe
+    %   Modification: Alessio Caciagli
     %   Revision: 1.0.0  
     %   Date: 2015/01/01
 
@@ -160,6 +162,72 @@ classdef Check
             end
             if ~check
                 error(msg);
+            end
+        end
+        function samedim(msg,x,y)
+            % SAMEDIM   Validate same dimension
+            %
+            % SAMEDIM(MSG,X,Y) returns the error message MSG
+            %   if the dimension of Y is not X.
+            %
+            % See also Check.
+            
+            switch x
+                case 3
+                    if ~(length(size(y))==3)
+                        error(msg)
+                    end
+                case 2
+                    if ~(length(size(y))==2)
+                        error(msg)
+                    end
+                    if ~all(size(y) - [1 1])
+                        error(msg')
+                    end
+                case 1
+                    if ~(length(size(y))==2)
+                        error(msg)
+                    end
+                    if all(size(y) - [1 1])
+                        %2D matrix.
+                        error(msg)
+                    end
+                    if ~any(size(y) - [1 1])
+                        %0D matrix.
+                        error(msg)
+                    end
+                otherwise
+                    error(msg)
+            end
+        end
+        function samemesh(msg,X,Y)
+            % SAMEMESH  Validate that quantity X (ComplexVector) has same mesh as quantity Y (ComplexVector)
+            %
+            % SAMEMESH (MSG,X,Y) returns the error message MSG
+            %   if the quantity X does not have the same mesh as Y.
+            %
+            %
+            % See also Check.
+            
+            if ~all(all([X.X,X.Y,X.Z]==[Y.X,Y.Y,Y.Z]))
+                error(msg)
+            end
+        end
+        function outofbound(msg,X,Y)
+            % OUTOFBOUND  Validate that quantity B (ComplexVector) is within
+            % bound of A (ComplexVector)
+            %
+            % OUTOFBOUND (MSG,X,Y) returns the error message MSG
+            %   if the quantity B outbonds A.
+            %
+            %
+            % See also Check.
+            
+            if(any([max(max((Y.X))) max(max((Y.Y))) max(max((Y.Z)))]>[max(max((X.X))) max(max((X.Y))) max(max((X.Z)))]))
+                error(msg)
+            end
+            if(any([min(min((Y.X))) min(min((Y.Y))) min(min((Y.Z)))]<[min(min((X.X))) min(min((X.Y))) min(min((X.Z)))]))
+                error(msg)
             end
         end
     end

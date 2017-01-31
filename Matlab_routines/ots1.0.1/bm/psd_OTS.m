@@ -1,4 +1,4 @@
-function [psd,f,psd_err,psd_vec,f_vec] = psd(dt,Vx,varargin)
+function [psd,f,psd_err,psd_vec,f_vec] = psd_OTS(dt,Vx,varargin)
 % PSD   Power spectral density
 %
 % [PSD,F,PSDerr,PSDvec,Fvec] = PSD(DT,VX) calculates the power spectral density PSD
@@ -82,10 +82,10 @@ if strcmpi(blocking,'lin')
     binswidths(1) = (binscenters(2)-binscenters(1))/2;
     binswidths(2:length(binscenters)-1) = (binscenters(3:end)-binscenters(1:end-2))/4;
     binswidths(length(binscenters)) = (binscenters(end)-binscenters(end-1))/2;
-
+    tic
     f_b = zeros(size(binscenters));
-    psd_b = zeros(size(binscenters,size(psd_vec,2)));
-    psd_b_err = zeros(size(binscenters,size(psd_vec,2)));
+    psd_b = zeros(size(binscenters));
+    psd_err_b = zeros(size(binscenters));
     for bin = 1:1:length(binscenters)
 
         ind = find( f>=binscenters(bin)-binswidths(bin) & f<=binscenters(bin)+binswidths(bin) );
@@ -98,9 +98,10 @@ if strcmpi(blocking,'lin')
     f = f_b;
     psd = psd_b;
     psd_err = psd_err_b;
+    toc
 
 elseif strcmpi(blocking,'log')
-
+    
     % Centers of bins
     binscenters = [log(fmin):(log(fmax)-log(fmin))/binsnumber:log(fmax)];
     binscenters = exp(binscenters);
@@ -112,7 +113,7 @@ elseif strcmpi(blocking,'log')
 
     f_b = zeros(size(binscenters));
     psd_b = zeros(size(binscenters,size(psd_vec,2)));
-    psd_b_err = zeros(size(binscenters,size(psd_vec,2)));
+    psd_err_b = zeros(size(binscenters,size(psd_vec,2)));
     for bin = 1:1:length(binscenters)
 
         ind = find( f>=binscenters(bin)-binswidths(bin) & f<=binscenters(bin)+binswidths(bin) );
