@@ -19,6 +19,7 @@ title('Real part')
 hold on
 E.real().plot('scale',[1e+9 50/max(max(max(abs(norm(E)))))],'color','k')
 B.real().plot('scale',[1e+9 50/max(max(max(abs(norm(B)))))],'color','b')
+hold off
 axis equal
 view(3)
 xlabel('x [nm]')
@@ -30,6 +31,7 @@ title('imaginary part')
 hold on
 E.imag().plot('scale',[1e+9 50/max(max(max(abs(norm(E)))))],'color','r')
 B.imag().plot('scale',[1e+9 50/max(max(max(abs(norm(B)))))],'color','g')
+hold off
 axis equal
 view(3)
 xlabel('x [nm]')
@@ -38,74 +40,80 @@ zlabel('z [nm]')
 
 %% Beam wave
 
-w0 = 5e-3;
+w0 = 1e-6;
 Ex0 = 1;
 Ey0 = 0;
-R = 5e-3;
+R = 4e-6;
 Nphi = 16;
 Nr = 10;
 bg = BeamGauss(Ex0,Ey0,w0,R,Nphi,Nr);
 f = 1.075*R;
 ef = EFieldFocus(bg,f);
 
-[x,y,z] = meshgrid(-1e-6:1e-7:1e-6,-1e-6:5e-8:1e-6,1e-7);
+[x,y,z] = meshgrid(-3e-6:2e-7:3e-6,-3e-6:1e-7:3e-6,0);
 r = Point(x,y,z);
 
 E=ef.E(r);
 B=ef.B(r);
 
 figure(2)
-
-subplot(1,2,1)
+subplot(2,2,1)
 title('Real part')
 hold on
 E.real().plot('scale',[1e+9 50/max(max(max(abs(norm(E)))))],'color','k')
 B.real().plot('scale',[1e+9 50/max(max(max(abs(norm(B)))))],'color','b')
+hold off
 axis equal
 view(3)
 xlabel('x [nm]')
 ylabel('y [nm]')
 zlabel('z [nm]')
 
-subplot(1,2,2)
+subplot(2,2,2)
 title('imaginary part')
 hold on
 E.imag().plot('scale',[1e+9 50/max(max(max(abs(norm(E)))))],'color','r')
 B.imag().plot('scale',[1e+9 50/max(max(max(abs(norm(B)))))],'color','g')
+hold off
 axis equal
 view(3)
 xlabel('x [nm]')
 ylabel('y [nm]')
 zlabel('z [nm]')
 
-%%
 
+subplot(2,2,3)
+title('Ez, z=0')
+surf(x,y,real(E.Vx))
+shading interp
+%axis equal
+view(3)
+xlabel('x [nm]')
+ylabel('y [nm]')
 
-[x,y,z] = meshgrid(-5e-6:1e-7:5e-6,-5e-6:1e-7:5e-6,0);
+subplot(2,2,4)
+title('Ez, z=0')
+surf(x,y,sqrt(E.Vz.*conj(E.Vz)))
+shading interp
+%axis equal
+view(3)
+xlabel('x [nm]')
+ylabel('y [nm]')
+
+z=y;
+y=x;
+x=zeros(size(x));
+
 r = Point(x,y,z);
 
 E=ef.E(r);
 B=ef.B(r);
+
 figure(3)
-subplot(1,2,1)
-surf(x,y,norm(E))
+surf(y,z,real(E.Vx))
 shading interp
 axis equal
 view(2)
 xlabel('x [nm]')
 ylabel('y [nm]')
-
-[y,z,x] = meshgrid(-5e-6:1e-7:5e-6,-5e-6:1e-7:5e-6,0);
-r = Point(x,y,z);
-
-E=ef.E(r);
-B=ef.B(r);
-subplot(1,2,2)
-surf(y,z,real(E.Vx))
-shading interp
-axis equal
-view(2)
-xlabel('y [nm]')
-ylabel('z [nm]')
-
 
