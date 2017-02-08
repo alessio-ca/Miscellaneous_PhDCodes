@@ -50,7 +50,7 @@ bg = BeamGauss(Ex0,Ey0,w0,R,Nphi,Nr);
 f = 1.075*R;
 ef = EFieldFocus(bg,f);
 
-[x,y,z] = meshgrid(-3e-6:2e-7:3e-6,-3e-6:1e-7:3e-6,0);
+[x,y,z] = meshgrid(-2e-6:0.5e-7:2e-6,-2e-6:0.5e-7:2e-6,0);
 r = Point(x,y,z);
 
 E=ef.E(r);
@@ -83,8 +83,8 @@ zlabel('z [nm]')
 
 
 subplot(2,2,3)
-title('Ez, z=0')
-surf(x,y,real(E.Vx))
+title('Ex, z=0')
+surf(x,y,sqrt(E.Vx.*conj(E.Vx)))
 shading interp
 %axis equal
 view(3)

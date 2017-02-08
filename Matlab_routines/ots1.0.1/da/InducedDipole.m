@@ -188,7 +188,7 @@ classdef InducedDipole < EField
             
             [Ls,DxLs] = ef.Ls(r,varargin{:});
             
-            Fsc = id.sext()*PhysConst.c0/id.n()*DxLs;
+            Fsc = real(id.sext()*PhysConst.c0/id.n()*DxLs);
             
             F = Fgrad + Fscat + Fsc;
             

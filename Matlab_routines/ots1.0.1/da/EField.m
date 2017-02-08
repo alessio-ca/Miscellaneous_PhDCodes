@@ -147,8 +147,7 @@ classdef EField
                 -dxE.Vz+dzE.Vx, ...
                 dxE.Vy-dyE.Vx ...
                 );
-            
-            disp(ef.E(r,varargin{:})*B)
+        
         end
         function S = S(ef,r,varargin)
             % S Poynting vector [W/m^2]

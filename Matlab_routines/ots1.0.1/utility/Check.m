@@ -213,20 +213,29 @@ classdef Check
                 error(msg)
             end
         end
-        function outofbound(msg,X,Y)
-            % OUTOFBOUND  Validate that quantity B (ComplexVector) is within
-            % bound of A (ComplexVector)
+        function outofbound(msg,X,Y,varargin)
+            % OUTOFBOUND  Validate that quantity Y (ComplexVector) is within
+            % bound of X (ComplexVector)
             %
-            % OUTOFBOUND (MSG,X,Y) returns the error message MSG
-            %   if the quantity B outbonds A.
+            % OUTOFBOUND(MSG,X,Y,'dr',DR) sets the tolerance to DR [default = 1e-10 m].
+            %
             %
             %
             % See also Check.
             
-            if(any([max(max((Y.X))) max(max((Y.Y))) max(max((Y.Z)))]>[max(max((X.X))) max(max((X.Y))) max(max((X.Z)))]))
+            % increment [m]
+            dr = 1e-10;
+            for n = 1:2:length(varargin)
+                if strcmpi(varargin{n},'dr')
+                    dr = varargin{n+1};
+                    Check.isnumeric('dr must be a positive real number',dr,'>',0)
+                end
+            end
+            
+            if(any([max(max((X.X)))-dr max(max((X.Y)))-dr max(max((X.Z)))-dr]>[max(max((Y.X))) max(max((Y.Y))) max(max((Y.Z)))]))
                 error(msg)
             end
-            if(any([min(min((Y.X))) min(min((Y.Y))) min(min((Y.Z)))]<[min(min((X.X))) min(min((X.Y))) min(min((X.Z)))]))
+            if(any([min(min((X.X)))+dr min(min((X.Y)))+dr min(min((X.Z)))+dr]<[min(min((Y.X))) min(min((Y.Y))) min(min((Y.Z)))]))
                 error(msg)
             end
         end
