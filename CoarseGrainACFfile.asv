@@ -1,20 +1,25 @@
-function [acf,tau,acf_err,acf_vec]=CoarseGrainACF(VX,dt,S,varargin)
+function [acf,tau,acf_err,acf_vec]=CoarseGrainACFfile(file,dt,S,varargin)
 
-% CoarseGrainACF   Autocorrelation function with coarse-graining
+% CoarseGrainACF   Autocorrelation function with coarse-graining, file
+% version
 %
-% [ACF,TAU,ACFerr,ACFvec]=CoarseGrainACF(VX,DT,S) calculates the 
-%   auto-correlation function (ACF) of a data series using a
+% [ACF,TAU,ACFerr,ACFvec]=CoarseGrainACFfile(file,DT,S) calculates the 
+%   auto-correlation function (ACF) of a 2D data series using a
 %   multiple-tau correlator, a method for the calculation of time correlaton
-%   functions with coarse graining (Ramirez et al., 2010)
+%   functions with coarse graining (Ramirez et al., 2010). It reads a file
+%   line-by-line (useful for large files for which loading could be
+%   significatively expensive)
 %
-%   VX can be a matrix containing several signals (one per column, all the same length).
+%   FILE is a csv text file containing one time series and two signals (one per column, all the same length).
+%       N.B! The first column is supposed to be reserved for the time
+%       signal and it is thus ignored!
 %   DT is the time interval at which the signal is sampled.
 %   S is the number of arrays in the correlator (see Ramirez et al. (2010))
 %   TAU are the values of the time delays.
 %   ACFerr is the error calculated as standard deviation of the ACF value.
 %   ACFvec is the set of all ACF calculated.
 %
-% [ACF,TAU,ACFerr,ACFvec]=CoarseGrainACF(VX,DT,S,'PropertyName',PropertyValue) permits
+% [ACF,TAU,ACFerr,ACFvec]=CoarseGrainACFfile(file,DT,S,'PropertyName',PropertyValue) permits
 %   to set the value of PropertyName to PropertyValue.
 %   Admissible Properties are:
 %       P           -   Block size for coarse-graining (default = 16)   
@@ -44,19 +49,28 @@ if mod(P,M)~=0
 end
 
 %Array initialization
-Level = zeros(S,P,size(VX,2));
-CorrGL = zeros(S,P,size(VX,2));
-Accum = zeros(S,size(VX,2));
+Level = zeros(S,P,2);
+CorrGL = zeros(S,P,2);
+Accum = zeros(S,2);
 
 Count = zeros(S,P);
 CountAccum = zeros(S,1);
 TimesGL=zeros(S,P);
 
-for i=1:size(VX,1)
-    %Sample: update base level with data points
-    UpdateLevel(1,VX(i,:));
+% Open the file & check on emptiness 
+fid = fopen(file);
+finfo = dir(file);
+fsize = finfo.bytes;
+if fsize == 0
+    error('Error when reading file: file is empty.');
+end
+
+%Sample: update base level with data points
+while ~feof(fid)    
+    VX = fscanf(fid, '%*f, %f, %f',[1,2]);
+    UpdateLevel(1,VX);
     UpdateCorrCount(1);
-    UpdateAccum(1,VX(i,:));
+    UpdateAccum(1,VX);
 end
 
 %Finalize: normalize and calculate times
@@ -66,13 +80,13 @@ for i=1:S
 end
 
 %Scaled autocorrelations on number of observations
-CorrGL=(CorrGL./repmat(Count,[1,1,size(VX,2)]));
+CorrGL=(CorrGL./repmat(Count,[1,1,2]));
 
 %Discard empty levels & condense levels into a single array
 id=~isnan(CorrGL(:,:,1));
 tau=TimesGL(id);
-acf_vec = zeros(length(tau),size(VX,2));
-for i=1:size(VX,2)
+acf_vec = zeros(length(tau),2);
+for i=1:2
     tempCorr=squeeze(CorrGL(:,:,i));
     acf_vec(:,i)=tempCorr(id);
 end

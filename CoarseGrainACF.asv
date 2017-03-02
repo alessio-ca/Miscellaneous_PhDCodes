@@ -24,83 +24,89 @@ function [acf,tau,acf_err,acf_vec]=CoarseGrainACF(VX,dt,S,varargin)
 % CREATED: Alessio Caciagli, University of Cambridge, February 2017
 
 
+
+acf_vec=0;
+tau=0;
+acf=0;
+acf_err=0;
+
+
 %%%%%% Main %%%%%%
 
+        
+        %Coarse-graining parameter (to be defined in the sampling stage)
+        P=16;
+        M=2;
+        for n = 1:2:length(varargin)
+            if strcmpi(varargin{n},'P')
+                P = varargin{n+1};
+            elseif strcmpi(varargin{n},'M')
+                M = varargin{n+1};
+            end
+        end
+        
+        %Initialize
+        if mod(P,M)~=0
+            error('Ratio P/M is not an integer!')
+        end
+        
+        %Array initialization
+        Level = zeros(S,P,size(VX,2));
+        CorrGL = zeros(S,P,size(VX,2));
+        Accum = zeros(S,size(VX,2));
+        
+        Count = zeros(S,P);
+        CountAccum = zeros(S,1);
+        TimesGL=zeros(S,P);
+        
+        for i=1:s
+        %Sample: update base level with data points
+        UpdateLevel(1,VX);
+        UpdateCorrCount(1);
+        UpdateAccum(1,VX);
+        
+        %Finalize: normalize and calculate times
+        for i=1:S
+            %Calculate times
+            CalculateTimes(i);
+        end
+        
+        %Scaled autocorrelations on number of observations
+        CorrGL=(CorrGL./repmat(Count,[1,1,size(VX,2)]));
+        
+        %Discard empty levels & condense levels into a single array
+        id=~isnan(CorrGL(:,:,1));
+        tau=TimesGL(id);
+        acf_vec = zeros(length(tau),size(VX,2));
+        for i=1:size(VX,2)
+            tempCorr=squeeze(CorrGL(:,:,i));
+            acf_vec(:,i)=tempCorr(id);
+        end
+        
+        %Apply correct sorting
+        [tau,id]=sort(tau);
+        acf_vec=acf_vec(id,:);
+        
+        % Maximum delay (to be defined in the finalize stage)
+        taumax = +Inf;
+        for n = 1:2:length(varargin)
+            if strcmpi(varargin{n},'taumax')
+                taumax = varargin{n+1};
+            end
+        end
+        
+        if isfinite(taumax)
+            tau=tau(tau<taumax);
+            acf_vec = acf_vec(1:length(tau),:);
+        end
 
-%Coarse-graining parameter (to be defined in the sampling stage)
-P=16;
-M=2;
-for n = 1:2:length(varargin)
-    if strcmpi(varargin{n},'P')
-        P = varargin{n+1};
-    elseif strcmpi(varargin{n},'M')
-        M = varargin{n+1};
-    end
+        
+        %Normalization
+        acf_vec=acf_vec./acf_vec(1,:);
+        acf = mean(acf_vec,2);
+        acf_err = std(acf_vec,0,2);
+        
 end
-
-%Initialize
-if mod(P,M)~=0
-    error('Ratio P/M is not an integer!')
-end
-
-%Array initialization
-Level = zeros(S,P,size(VX,2));
-CorrGL = zeros(S,P,size(VX,2));
-Accum = zeros(S,size(VX,2));
-
-Count = zeros(S,P);
-CountAccum = zeros(S,1);
-TimesGL=zeros(S,P);
-
-for i=1:size(VX,1)
-    %Sample: update base level with data points
-    UpdateLevel(1,VX(i,:));
-    UpdateCorrCount(1);
-    UpdateAccum(1,VX(i,:));
-end
-
-%Finalize: normalize and calculate times
-for i=1:S
-    %Calculate times
-    CalculateTimes(i);
-end
-
-%Scaled autocorrelations on number of observations
-CorrGL=(CorrGL./repmat(Count,[1,1,size(VX,2)]));
-
-%Discard empty levels & condense levels into a single array
-id=~isnan(CorrGL(:,:,1));
-tau=TimesGL(id);
-acf_vec = zeros(length(tau),size(VX,2));
-for i=1:size(VX,2)
-    tempCorr=squeeze(CorrGL(:,:,i));
-    acf_vec(:,i)=tempCorr(id);
-end
-
-%Apply correct sorting
-[tau,id]=sort(tau);
-acf_vec=acf_vec(id,:);
-
-% Maximum delay (to be defined in the finalize stage)
-taumax = +Inf;
-for n = 1:2:length(varargin)
-    if strcmpi(varargin{n},'taumax')
-        taumax = varargin{n+1};
-    end
-end
-
-if isfinite(taumax)
-    tau=tau(tau<taumax);
-    acf_vec = acf_vec(1:length(tau),:);
-end
-
-
-%Normalization
-acf_vec=acf_vec./acf_vec(1,:);
-acf = mean(acf_vec,2);
-acf_err = std(acf_vec,0,2);
-
-
 
 %%%%%% Subroutines %%%%%%
 

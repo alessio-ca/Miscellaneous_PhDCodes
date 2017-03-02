@@ -52,6 +52,9 @@ kz=  2*pi*gamma*fcz;
 D_fit_x = (1/bx) * 2 * (pi.^2);
 D_fit_z = (1/bz) * 2 * (pi.^2);
 
+Xmin_x = sx00 - (sx01*sx01*sx22 + sx11*sx11*sx02 - 2*sx01*sx11*sx12)/(sx02*sx22 - sx12*sx12);
+Xmin_z = sz00 - (sz01*sz01*sz22 + sz11*sz11*sz02 - 2*sz01*sz11*sz12)/(sz02*sz22 - sz12*sz12);
+
 S_fit_x = sqrt(D/D_fit_x);
 S_fit_z = sqrt(D/D_fit_z);
 
@@ -66,6 +69,7 @@ xx   = min(F_X) / fcx;
 yx   = max(F_X) / fcx;
 xz   = min(F_Z) / fcz;
 yz   = max(F_Z) / fcz;
+
 sx   = sqrt(pi) * ( (2*yx) / (1 + yx^2) - (2*xx) / (1 + xx^2) + 2 * atan((yx - xx) / (1 + xx*yx)) - ...
     (4/(yx - xx)) * (atan((yx - xx) / (1 + xx*yx)))^2) ^ (-1/2);
 sz   = sqrt(pi) * ( (2*yz) / (1 + yz^2) - (2*xz) / (1 + xz^2) + 2 * atan((yz - xz) / (1 + xz*yz)) - ...

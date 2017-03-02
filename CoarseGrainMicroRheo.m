@@ -1,11 +1,3 @@
-% fps=1000;
-% folder1='C:\Users\ac2014\Documents\MATLAB\Git-MATLAB\Data_Microrheology\';
-% cell_folder_list={'Simulation_1000FPS_Kel_1e-6_D_2e-6'};
-% filename=['track_particle_output',char(cell_folder_list(1)),'.csv'];
-% traj=dlmread([folder1,'Linked_',filename],',');
-% traj(:,4)=[];
-% traj=circshift(traj,[0 1]);
-
 function [Corr,G]=CoarseGrainMicroRheo(datax,datay,fps,P,M,S)
 
 %Calculate the G modulus of a data series (2D) using a
