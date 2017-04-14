@@ -132,8 +132,8 @@ end
         %x is the element to insert
         
         Level(i,2:P,:) = Level(i,1:P-1,:);
-        Level(i,1,:) = x;
-        
+        Level(i,1,:) = x;      
+
     end
 
 %2. UpdateCorrCount:
@@ -149,8 +149,7 @@ end
         
         CorrGL(i,start:end,:) = CorrGL(i,start:end,:) + Level(i,1,:).*Level(i,start:end,:);
         Count(i,start:end) = Count(i,start:end) + 1;
-        
-        
+     
     end
 
 %3. UpdateAccum:
