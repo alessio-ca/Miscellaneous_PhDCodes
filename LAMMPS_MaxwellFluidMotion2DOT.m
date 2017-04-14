@@ -7,12 +7,10 @@ close all; clc;
 %Parameter declaration
 
 dt = 1e-8; %Time step
-%dt=4.914731871829904e-06;
 R = 0.5e-6; %Radius of bead
 rho = 2650; %Density of the bead
 eta = 0.001; %Viscosity (fictituous)
 tau_rel = 5e-7; %Relaxation time
-%tau_rel = 4.914731871829904e-04;
 T = 300; %Temperature
 k = [1e-6 1e-6 1e-6]; %Trap elastic constant
 k=[0 0 0];
@@ -27,7 +25,6 @@ kB=1.38e-23; %Boltzmann constant
 kBT=kB*T;
 D = kBT/(6*pi*eta*R);
 gamma = kBT/D;
-%gamma = 2.034698994937581e-12;
 theta = exp(-dt/tau_rel);
 alpha = (1-theta)/sqrt(dt);
 
