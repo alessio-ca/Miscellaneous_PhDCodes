@@ -12,7 +12,7 @@ eta = 0.001; %Viscosity
 T = 300; %Temperature
 k = [1e-6 1e-6]; %Trap elastic constant
 r_eq = [0 0]; %Trap Equilibrium position
-N = 5e+5; %Number of steps
+N = 1e+8; %Number of steps
 
 r0 = [0 0]; %Initial position
 

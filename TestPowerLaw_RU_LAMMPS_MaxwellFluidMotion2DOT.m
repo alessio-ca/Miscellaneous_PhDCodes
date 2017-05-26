@@ -184,7 +184,7 @@ for n = 2:1:100
     r(1,:) = r(1,:) + dt*vhalf;
     S(1:nmodes,:) = theta.*S(1:nmodes,:) - (1 - theta).*gamma.*repmat(vhalf,[nmodes,1]) + alpha.*sqrt(2*T*gamma).*W(nmodes*(n-2)+1:nmodes*(n-1),:);
     Favg = mean(sum(S(1:nmodes,:))-repmat(k,1,run).*(r(1,:)-repmat(r_eq,1,run))); %Center of mass acceleration, to be substracted
-    v(1,:) = vhalf + dt/(2)*(-repmat(k,1,run).*(r(1,:)-repmat(r_eq,1,run)) + sum(S(1:2,:)) - Favg);
+    v(1,:) = vhalf + dt/(2)*(-repmat(k,1,run).*(r(1,:)-repmat(r_eq,1,run)) + sum(S(1:nmodes,:)) - Favg);
 end
 W = randn(nmodes*N,2*run); % noise
 %%Sample

@@ -10,13 +10,14 @@ dt = 1e-8; %Time step
 R = 0.5e-6; %Radius of bead
 rho = 2650; %Density of the bead
 eta = 0.001; %Viscosity (fictituous)
-tau_rel = 5e-7; %Relaxation time
+tau_rel = 1e-15; %Relaxation time
 T = 300; %Temperature
-k = [1e-6 1e-6 1e-6]; %Trap elastic constant
-k=[0 0 0];
+k = [1000e-6 1000e-6 1000e-6]; %Trap elastic constant
+%k=[0 0 0];
 r_eq = [0 0 0]; %Trap Equilibrium position
-N = 1e+4; %Number of steps
-run = 100; %Number of trajectories
+N = 1e+7; %Number of steps
+%run = 100; %Number of trajectories
+run = 10; %Number of trajectories
 r0 = [0 0 0]; %Initial position
 
 % Pre-calculation coefficients
@@ -66,25 +67,31 @@ for n = 2:1:N
 end
 toc
 %[vacfCG,t_vacfCG,vacfCG_err]=OnTheFly_CoarseGrainACF(v(1,:),dt,20,2,'TauMax',1e3*dt);
+%%
 tic
 [vacf,t_vacf,vacf_err]=acf_routine(dt,v,'TauMax',1e3*dt);
+[vpacf,t_vpacf,vpacf_err]=acf_routine(dt,diff(r)/dt,'TauMax',1e3*dt);
+[vpacf_u,t_vpacf_u,vpacf_err_u]=acf_routine(dt*1000,diff(r(1:1000:end,:))/(1000*dt));
 [msd,t_msd,msd_err]=msd_routine(dt,r);
 
 toc
+%%
 figure(1)
 %errorbar(t_vacfCG,vacfCG,vacfCG_err/sqrt(run),'o')
-errorbar(t_vacf,vacf,vacf_err/sqrt(run),'o')
+%errorbar(t_vacf,vacf,vacf_err/sqrt(run),'o')
+semilogx(t_vacf,vacf,'o')
 hold on
-plot(t_vacf,exp(-t_vacf/(2*tau_rel)).*(cos(Omega*t_vacf) + 1/(2*tau_rel*Omega)*sin(Omega*t_vacf)))
-plot(t_vacf,exp(-gamma*t_vacf/m))
+%semilogx(t_vacf,exp(-t_vacf/(2*tau_rel)).*(cos(Omega*t_vacf) + 1/(2*tau_rel*Omega)*sin(Omega*t_vacf)))
+semilogx(t_vacf,exp(-gamma*t_vacf/m))
 hold off
 xlabel('Time')
 ylabel('VACF')
-
+drawnow
+%%
 figure(2)
-errorbar(t_msd,1e+12*msd,1e+12*msd_err/sqrt(run),'o')
+errorbar(t_msd(1:100:end),1e+12*msd(1:100:end),1e+12*msd_err(1:100:end)/sqrt(run),'o')
 hold on
-plot(t_msd,1e+12*2*D*t_msd)
+plot(t_msd(1:100:end),1e+12*2*D*t_msd(1:100:end))
 hold off
 set(gca,'XScale','log','YScale','log')
 xlabel('Time')

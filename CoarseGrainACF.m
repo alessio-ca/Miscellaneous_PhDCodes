@@ -20,6 +20,7 @@ function [acf,tau,acf_err,acf_vec]=CoarseGrainACF(VX,dt,S,varargin)
 %       P           -   Block size for coarse-graining (default = 16)   
 %       M           -   Coarse-graining factor (default = 2)
 %       TauMax      -   Maximum delay to be calcualted (default = +Inf)
+%       Norm        -   Normalization to 1 (default = True)
 
 % CREATED: Alessio Caciagli, University of Cambridge, February 2017
 
@@ -81,11 +82,17 @@ end
 [tau,id]=sort(tau);
 acf_vec=acf_vec(id,:);
 
-% Maximum delay (to be defined in the finalize stage)
+% Maximum delay and normalization (to be defined in the finalize stage)
 taumax = +Inf;
+norm = 1;
 for n = 1:2:length(varargin)
     if strcmpi(varargin{n},'taumax')
         taumax = varargin{n+1};
+    elseif strcmpi(varargin{n},'norm')
+        norm = varargin{n+1};
+        if norm ~=0 && norm ~= 1
+            error('Wrong variable type (expected logical 0 or 1)')
+        end
     end
 end
 
@@ -96,7 +103,10 @@ end
 
 
 %Normalization
-acf_vec=acf_vec./acf_vec(1,:);
+if norm == 1
+    acf_vec=acf_vec./acf_vec(1,:);
+end
+    
 acf = mean(acf_vec,2);
 acf_err = std(acf_vec,0,2);
 
