@@ -66,6 +66,7 @@ classdef EFieldPlaneWave < EField
             Check.isa('The set of positions where to calculate the electric field must be a Point',r,'Point')
 
             E = ef.E0*exp(1i*(ef.k()*ef.uk.topoint().*r))*ef.e;
+            E = ComplexVector(E.X,E.Y,E.Z,E.Vx,E.Vy,E.Vz);
             E.X = r.X;
             E.Y = r.Y;
             E.Z = r.Z;
