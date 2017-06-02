@@ -25,28 +25,32 @@ r = Point(x,y,z);
 Ex=zeros(size(r,1),size(r,2));
 Ey=zeros(size(r,1),size(r,2));
 Ez=zeros(size(r,1),size(r,2));
+Bx=zeros(size(r,1),size(r,2));
+By=zeros(size(r,1),size(r,2));
+Bz=zeros(size(r,1),size(r,2));
+Fx=zeros(size(r,1),size(r,2));
+Fy=zeros(size(r,1),size(r,2));
+Fz=zeros(size(r,1),size(r,2));
 rx=r.X(:);
 ry=r.Y(:);
 rz=r.Z(:);
 
 %%
 % %Enable progress bar for parallel pool
-% try
-%     parpool;
-% catch ME
-%     if ~strcmp(ME.identifier,'parallel:convenience:ConnectionOpen')
-%         rethrow(ME)
-%     end
-% end
-% warning('off','MATLAB:Java:DuplicateClass')
-% pctRunOnAll javaaddpath java
-% progressStep=ceil(length(size(r,1)*size(r,2))/100);
-% ppm = ParforProgMon('Progress: ', length(size(r,1)*size(r,2)), progressStep, 300, 80);
+try
+    parpool;
+catch ME
+    if ~strcmp(ME.identifier,'parallel:convenience:ConnectionOpen')
+        rethrow(ME)
+    end
+end
+targetWorkCount = size(r,1)*size(r,2);
+barWidth= int32( 30 );
+p =  TimedProgressBar( targetWorkCount, barWidth, ...
+    'Computing, wait for ', ', completed ', 'Concluded in ' );
 
-tic
-parfor k = 1:size(r,1)*size(r,2)
+parfor k = 1:targetWorkCount
     r2=Point(rx(k),ry(k),rz(k));
-    disp(['Iteration ',num2str(k)]);
     rP = [r1,r2];
     idP = InducedDipole(alpharc,'lambda0',lambda0,'rd',rP(1));
     
@@ -56,10 +60,16 @@ parfor k = 1:size(r,1)*size(r,2)
     
     numDip=2;
     
-    if norm(Point(rx(k),ry(k),rz(k)) - r1)<2*a
+    if norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a - 0.5e-7) %For force calculation
         Ex(k)=NaN;
         Ey(k)=NaN;
         Ez(k)=NaN;
+        Bx(k)=NaN;
+        By(k)=NaN;
+        Bz(k)=NaN;
+        Fx(k)=NaN;
+        Fy(k)=NaN;
+        Fz(k)=NaN;
     else
         tol = 1;
         cc = 0;
@@ -88,23 +98,57 @@ parfor k = 1:size(r,1)*size(r,2)
             tol = max([real(chk),imag(chk)]);
         end
         
+        %Field calculation
         Ex(k)=E_inc.E(r2).Vx + idP(1).E(r2,Ei_n(1)).Vx;
         Ey(k)=E_inc.E(r2).Vy + idP(1).E(r2,Ei_n(1)).Vy;
         Ez(k)=E_inc.E(r2).Vz + idP(1).E(r2,Ei_n(1)).Vz;
+        Bx(k)=E_inc.B(r2).Vx + idP(1).B(r2,Ei_n(1)).Vx;
+        By(k)=E_inc.B(r2).Vy + idP(1).B(r2,Ei_n(1)).Vy;
+        Bz(k)=E_inc.B(r2).Vz + idP(1).B(r2,Ei_n(1)).Vz;
+        
+        %Force calculation, 5 pts interpol.
+        [x_temp,y_temp,z_temp] = meshgrid(r2.X-1e-7:.5e-8:r2.X+1e-7,r2.Y-1e-7:.5e-8:r2.Y+1e-7,0);
+        r_temp = Point(x_temp,y_temp,z_temp);
 
-        %     if mod(k,progressStep)==0
-        %         ppm.increment();
-        %     end
+
+        E_temp = E_inc.E(r_temp) + idP(1).E(r_temp,Ei_n(1));
+        B_temp = E_inc.B(r_temp) + idP(1).B(r_temp,Ei_n(1));
+        [F_temp,~,~] = idP(2).force_general(r2,E_temp,B_temp,2);
+        
+        Fx(k)=F_temp.Vx;
+        Fy(k)=F_temp.Vy;
+        Fz(k)=F_temp.Vz;
+        
+        if norm(Point(rx(k),ry(k),rz(k)) - r1)<2*a %True cut
+            Ex(k)=NaN;
+            Ey(k)=NaN;
+            Ez(k)=NaN;
+            Bx(k)=NaN;
+            By(k)=NaN;
+            Bz(k)=NaN;
+            Fx(k)=NaN;
+            Fy(k)=NaN;
+            Fz(k)=NaN;
+        end
+        
     end
-end
-% ppm.delete()
-toc
-%%
+    p.progress;
 
-%Et1 = E_inc.E(r) + idP(1).E(r,Ei_n(1));
-%Bt1 = E_inc.B(r) + idP(1).B(r,Ei_n(1));
-%[F,~,~] = idP(2).force_general(r,Et1,Bt1,2);
-Z=norm(F);
+end
+p.stop;
+
+Et = ComplexVector(r.X,r.Y,r.Z,Ex,Ey,Ez);
+Bt = ComplexVector(r.X,r.Y,r.Z,Bx,By,Bz);
+F = ComplexVector(r.X,r.Y,r.Z,Fx,Fy,Fz);
+%%
+figure(1)
+subplot(1,3,1)
+surf(r.X,r.Y,norm(Et))
+subplot(1,3,2)
+surf(norm(Bt))
+subplot(1,3,3)
+surf(norm(F))
+%%
 
 spl=csapi({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6},Z');
 fun = @(X) 1e12*fnval(spl,X');
