@@ -60,7 +60,7 @@ parfor k = 1:targetWorkCount
     
     numDip=2;
     
-    if norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a - 0.5e-7) %For force calculation
+    if norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a - 1e-7) %For force calculation, add 2 grid points inside
         Ex(k)=NaN;
         Ey(k)=NaN;
         Ez(k)=NaN;
@@ -119,7 +119,7 @@ parfor k = 1:targetWorkCount
         Fy(k)=F_temp.Vy;
         Fz(k)=F_temp.Vz;
         
-        if norm(Point(rx(k),ry(k),rz(k)) - r1)<2*a %True cut
+        if norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a-0.5e-7) %For pre-divF force expression, add 1 grid point inside the particle
             Ex(k)=NaN;
             Ey(k)=NaN;
             Ez(k)=NaN;
@@ -140,7 +140,7 @@ p.stop;
 Et = ComplexVector(r.X,r.Y,r.Z,Ex,Ey,Ez);
 Bt = ComplexVector(r.X,r.Y,r.Z,Bx,By,Bz);
 F = ComplexVector(r.X,r.Y,r.Z,Fx,Fy,Fz);
-%%
+%% Plotting
 figure(1)
 subplot(1,3,1)
 surf(r.X,r.Y,norm(Et))
@@ -148,10 +148,36 @@ subplot(1,3,2)
 surf(norm(Bt))
 subplot(1,3,3)
 surf(norm(F))
-%%
 
-spl=csapi({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6},Z');
-fun = @(X) 1e12*fnval(spl,X');
-options=optimset('PlotFcns',@optimplotfval);
-minPt=[fminsearch(fun,[1e-20,1.1e-6],options);fminsearch(fun,[1e-20,-1.1e-6],options)];
+%% Optional: export of the calculated fields
+save('Force.mat','F')
+
+%% Optional: load the calculated fields
+load('Force.mat')
+
+%% Spline interpolant
+
+spl_x=csapi({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6},F.Vx);
+spl_y=csapi({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6},F.Vy);
+
+fun_x = @(X) fnval(spl_x,X);
+fun_y = @(X) fnval(spl_y,X);
+
+[xx,yy,zz] = meshgrid(-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6,0);
+fineFx = fun_x({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6});
+fineFy = fun_y({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6});
+divF = divergence(xx,yy,fineFx,fineFy);
+divF(xx.^2 + yy.^2 < 4*a*a)=0; %Final, true cut at particle diameter
+%% Optional: export of the calculated fields
+save('divF.mat','divF')
+
+%%
+spl_divF=csapi({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6},divF);
+fun_divF = @(X) fnval(spl_divF,X);
+
+surf(fun_divF({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6}))
+
+
+%options=optimset('PlotFcns',@optimplotfval);
+%minPt=[fminsearch(fun,[1e-20,1.1e-6],options);fminsearch(fun,[1e-20,-1.1e-6],options)];
 
