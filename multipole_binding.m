@@ -158,26 +158,26 @@ load('Force.mat')
 
 %% Spline interpolant
 
-spl_x=csapi({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6},F.Vx);
-spl_y=csapi({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6},F.Vy);
+spl_x=csapi({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6},F.Vx');
+spl_y=csapi({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6},F.Vy');
 
 fun_x = @(X) fnval(spl_x,X);
 fun_y = @(X) fnval(spl_y,X);
 
 [xx,yy,zz] = meshgrid(-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6,0);
-fineFx = fun_x({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6});
-fineFy = fun_y({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6});
+fineFx = fun_x({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6})';
+fineFy = fun_y({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6})';
 divF = divergence(xx,yy,fineFx,fineFy);
 divF(xx.^2 + yy.^2 < (2*a-0.5e-7)^2)=0; %Cut at particle diameter with an internal grid point
 %% Optional: export of the calculated fields
 save('divF.mat','divF')
 
 %%
-spl_divF=csapi({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6},divF);
+spl_divF=csapi({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6},divF');
 fun_divF = @(X) fnval(spl_divF,X);
 
 subplot(2,2,4)
-surf(fun_divF({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6}))
+surf(fun_divF({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6})')
 
 
 
