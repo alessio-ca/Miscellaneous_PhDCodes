@@ -61,15 +61,15 @@ parfor k = 1:targetWorkCount
     numDip=2;
     
     if norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a - 1.5e-7) %For force calculation, add 3 grid points inside
-        Ex(k)=NaN;
-        Ey(k)=NaN;
-        Ez(k)=NaN;
-        Bx(k)=NaN;
-        By(k)=NaN;
-        Bz(k)=NaN;
-        Fx(k)=NaN;
-        Fy(k)=NaN;
-        Fz(k)=NaN;
+        Ex(k)=0;
+        Ey(k)=0;
+        Ez(k)=0;
+        Bx(k)=0;
+        By(k)=0;
+        Bz(k)=0;
+        Fx(k)=0;
+        Fy(k)=0;
+        Fz(k)=0;
     else
         tol = 1;
         cc = 0;
@@ -120,15 +120,15 @@ parfor k = 1:targetWorkCount
         Fz(k)=F_temp.Vz;
         
         if norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a-1e-7) %For pre-divF force expression, add 2 grid point inside the particle
-            Ex(k)=NaN;
-            Ey(k)=NaN;
-            Ez(k)=NaN;
-            Bx(k)=NaN;
-            By(k)=NaN;
-            Bz(k)=NaN;
-            Fx(k)=NaN;
-            Fy(k)=NaN;
-            Fz(k)=NaN;
+            Ex(k)=0;
+            Ey(k)=0;
+            Ez(k)=0;
+            Bx(k)=0;
+            By(k)=0;
+            Bz(k)=0;
+            Fx(k)=0;
+            Fy(k)=0;
+            Fz(k)=0;
         end
         
     end
@@ -167,6 +167,12 @@ fun_y = @(X) fnval(spl_y,X);
 [xx,yy,zz] = meshgrid(-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6,0);
 fineFx = fun_x({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6})';
 fineFy = fun_y({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6})';
+figure(2)
+subplot(1,2,1)
+surf(fineFy,'edgealpha',0)
+subplot(1,2,2)
+surf(F.Vy)
+
 divF = divergence(xx,yy,fineFx,fineFy);
 divF(xx.^2 + yy.^2 < (2*a-0.5e-7)^2)=0; %Cut at particle diameter with an internal grid point
 %% Optional: export of the calculated fields
@@ -175,7 +181,7 @@ save('divF.mat','divF')
 %%
 spl_divF=csapi({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6},divF');
 fun_divF = @(X) fnval(spl_divF,X);
-
+figure(1)
 subplot(2,2,4)
 surf(fun_divF({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6})')
 
