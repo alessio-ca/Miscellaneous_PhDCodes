@@ -1,8 +1,9 @@
 pdem=createpde();
+aP = .527e-6/2;
 
 %% Geometry (N.B! Units are scaled in um)
 r1 = [3 4 -2 2 2 -2  -2 -2 2 2]';
-c1 = [1 0 0 .4]';
+c1 = [1 0 0 2*aP*1e6]';
 % Append extra zeros to the circles
 % so they have the same number of rows as the rectangle
 c1=[c1;zeros(length(r1)-length(c1),1)];
@@ -18,23 +19,28 @@ axis equal
 load('Force.mat')
 load('divF.mat')
 load('Efield.mat')
+F.Vx(F.X.^2 + F.Y.^2 < (2*aP)^2)=0;
+F.Vy(F.X.^2 + F.Y.^2 < (2*aP)^2)=0;
+divF(F.X.^2 + F.Y.^2 < (2*aP)^2)=0;
 
 spl_x=csapi({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6},F.Vx');
 spl_y=csapi({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6},F.Vy');
 spl_divF=csapi({-2e-6:.5e-8:2e-6,-2e-6:.5e-8:2e-6},divF');
 spl_E=csapi({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6},(norm(Et).^2)');
 
-fun_li = @(t) (1e+12*fnval(spl_x,[.4e-6*cos(t);.4e-6*sin(t)]).*sin(t)*0.4 - ...
-               1e+12*fnval(spl_y,[.4e-6*cos(t);.4e-6*sin(t)]).*cos(t)*0.4);
+fun_li = @(t) (1e+12*fnval(spl_x,[2*aP*cos(t);2*aP*sin(t)]).*sin(t)*2*aP*1e6 - ...
+               1e+12*fnval(spl_y,[2*aP*cos(t);2*aP*sin(t)]).*cos(t)*2*aP*1e6);
 
-fun_xp = @(region,state) 1e+12*fnval(spl_x,{-2e-6,1e-6*region.y}); %Edge 3 (force expressed in pN)
-fun_xm = @(region,state) -1e+12*fnval(spl_x,{2e-6,1e-6*region.y}); %Edge 1 (force expressed in pN)
-fun_yp = @(region,state) 1e+12*(fnval(spl_y,{1e-6*region.x,-2e-6}))'; %Edge 4 (force expressed in pN)
-fun_ym = @(region,state) -1e+12*(fnval(spl_y,{1e-6*region.x,2e-6}))'; %Edge 2 (force expressed in pN)
+fun_xp = @(region,state) 1e+12*fnval(spl_x,[1e-6*region.x;1e-6*region.y]); %Edge 3 (force expressed in pN)
+fun_xm = @(region,state) -1e+12*fnval(spl_x,[1e-6*region.x;1e-6*region.y]); %Edge 1 (force expressed in pN)
+fun_yp = @(region,state) 1e+12*fnval(spl_y,[1e-6*region.x;1e-6*region.y]); %Edge 4 (force expressed in pN)
+fun_ym = @(region,state) -1e+12*fnval(spl_y,[1e-6*region.x;1e-6*region.y]); %Edge 2 (force expressed in pN)
 
-fun_r = @(region,state) -1e+12*(cos(atan2(1e-6*region.y,1e-6*region.x)).*fnval(spl_x,[1e-6*region.x;1e-6*region.y]) + sin(atan2(1e-6*region.y,1e-6*region.x)).*fnval(spl_y,[1e-6*region.x;1e-6*region.y])); %Edge 5:8 (force expressed in pN)
 fun_E = @(region,state) 1e-12*(fnval(spl_E,[1e-6*region.x;1e-6*region.y])); %(E expressed in V/um)
 fun_lib = @(region,state) integral(fun_li,0,atan2(region.y,region.x));
+fun_r = @(region,state) -1e+12*(cos(atan2(1e-6*region.y,1e-6*region.x)).*fnval(spl_x,[1e-6*region.x;1e-6*region.y]) + sin(atan2(1e-6*region.y,1e-6*region.x)).*fnval(spl_y,[1e-6*region.x;1e-6*region.y])); %Edge 5:8 (force expressed in pN)
+
+
 
 fun_divF = @(p,t,u,time) 1e+6*fnval(spl_divF,[1e-6*(p(1,t(1,:))+p(1,t(2,:))+p(1,t(3,:)))/3;1e-6*(p(2,t(1,:))+p(2,t(2,:))+p(2,t(3,:)))/3]);
 
@@ -43,7 +49,10 @@ applyBoundaryCondition(pdem,'Edge',3,'g',fun_xp,'Vectorized','on'); %Neumann, n 
 applyBoundaryCondition(pdem,'Edge',2,'g',fun_ym,'Vectorized','on'); %Neumann, n . (c \nabla u) + qu = g on edge
 applyBoundaryCondition(pdem,'Edge',4,'g',fun_yp,'Vectorized','on'); %Neumann, n . (c \nabla u) + qu = g on edge
 applyBoundaryCondition(pdem,'Edge',5:8,'u',fun_lib,'Vectorized','off'); 
-applyBoundaryCondition(pdem,'Edge',5:8,'g',fun_r,'Vectorized','on'); %Neumann, n . (c \nabla u) + qu = g on edge
+%applyBoundaryCondition(pdem,'Edge',5:8,'g',fun_r,'Vectorized','on'); %Neumann, n . (c \nabla u) + qu = g on edge
+
+
+
 c = 1;
 a = 0;
 f = fun_divF;
@@ -69,22 +78,39 @@ zlabel('U (10^{-18} J)')
 title('Dipole binding potential')
 
 %% Check on solution
+u_interp=pdeInterpolant(p,t,u);
 [ux,uy] = pdegrad(p,t,u);
 ugrad = [ux;uy];
 ugrad = pdeprtni(p,t,ugrad);
+ugrad_interp=pdeInterpolant(p,t,ugrad);
+%%
 ugrad_n = sqrt(ugrad(:,1).^2 + ugrad(:,2).^2);
+edge=-2:.05:2;
+edge1=[2*ones(1,length(edge));edge];
+edge2=[edge;2*ones(1,length(edge))];
+edge3=[-2*ones(1,length(edge));edge];
+edge4=[edge;-2*ones(1,length(edge))];
+theta=pi/100:pi/100:2*pi;
+edgeC=[2*aP*cos(theta);2*aP*sin(theta)];
+uOut = evaluate(ugrad_interp,edge1(1,:),edge1(2,:));
+plot(-uOut(:,2))
+hold on
+plot(1e+12*F.Vy(F.X==2e-6))
+hold off
+
+%%
 figure(3)
 subplot(1,2,1)
+%pdesurf(p,t,ugrad_n);
 pdesurf(p,t,ugrad_n);
 title('Calculated Force')
 xlabel('x (um)')
 ylabel('y (um)')
 subplot(1,2,2)
-surf(norm(F),'EdgeColor','none')
+surf(-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6,norm(F),'EdgeColor','none')
 title('Original force')
 xlabel('x (um)')
 ylabel('y (um)')
-
 %%
 result = createPDEResults(pdem,u);
 [x,y]=meshgrid(-2:.005:2,-2:.005:2);
@@ -99,14 +125,13 @@ minPt=[minPt,fminsearch(fun_u,[0;1.1],options)];
 minPt=[minPt,fminsearch(fun_u,[-1.1;0],options)];
 minPt=[minPt,fminsearch(fun_u,[1.1;0],options)];
 
-    
 %%
+z=fun_u({-2:.005:2,-2:.005:2})';
+z(x.^2+y.^2<(2*aP*1e6)^2)=NaN;
 figure(4)
-surf(-2:.005:2,-2:.005:2,fun_u({-2:.005:2,-2:.005:2})','edgealpha',0)
-axis equal
-view(2)
+surf(x,y,z,'edgealpha',0)
 hold on
-plot3(minPt(1,:),minPt(2,:),10*ones(1,length(minPt)),'ro')
+plot3(minPt(1,:),minPt(2,:),fun_u(minPt),'rx')
 hold off
 
 
