@@ -25,8 +25,8 @@ r2=Point(x2,y2,z2);
 meshStep = .01e-6;
 
 
-% Variable position: Coarse mesh
-[x,y,z] = meshgrid(-2e-6 - 2*meshStep:meshStep:2e-6 + 2*meshStep,-2e-6 - 2*meshStep:meshStep:2e-6 + 2*meshStep,0);
+% Variable position: Coarse mesh (with 3 mesh steps space)
+[x,y,z] = meshgrid(-2e-6 - 3*meshStep:meshStep:2e-6 + 3*meshStep,-2e-6 - 3*meshStep:meshStep:2e-6 + 3*meshStep,0);
 r = Point(x,y,z);
 
 Ex=zeros(size(r,1),size(r,2));
@@ -68,8 +68,8 @@ parfor k = 1:targetWorkCount
     
     numDip=3;
     
-    if (norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a - 3*meshStep) || ...
-             norm(Point(rx(k),ry(k),rz(k)) - r2)<(2*a - 3*meshStep)) %For force calculation, add 3 grid points inside
+    if (norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a - 6*meshStep) || ...
+             norm(Point(rx(k),ry(k),rz(k)) - r2)<(2*a - 6*meshStep)) %For force calculation, add 6 grid points inside
         Ex(k)=0;
         Ey(k)=0;
         Ez(k)=0;
@@ -148,8 +148,8 @@ parfor k = 1:targetWorkCount
         Fy(k)=F_temp.Vy;
         Fz(k)=F_temp.Vz;
         
-        if (norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a-2*meshStep) || ...
-            norm(Point(rx(k),ry(k),rz(k)) - r2)<(2*a-2*meshStep))%For pre-divF force expression, add 2 grid point inside the particle
+        if (norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a-3*meshStep) || ...
+            norm(Point(rx(k),ry(k),rz(k)) - r2)<(2*a-3*meshStep))%For pre-divF force expression, add 3 grid point inside the particle (discard inner 3 pts)
             Ex(k)=0;
             Ey(k)=0;
             Ez(k)=0;
@@ -189,32 +189,86 @@ load('Force_3.mat')
 
 %% Spline interpolant
 
-spl_x=csapi({-2e-6-2*meshStep:meshStep:2e-6+2*meshStep,-2e-6-2*meshStep:meshStep:2e-6+2*meshStep},F.Vx');
-spl_y=csapi({-2e-6-2*meshStep:meshStep:2e-6+2*meshStep,-2e-6-2*meshStep:meshStep:2e-6+2*meshStep},F.Vy');
+spl_x=csapi({-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep:2e-6+3*meshStep},F.Vx');
+spl_y=csapi({-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep:2e-6+3*meshStep},F.Vy');
 
 fun_x = @(X) fnval(spl_x,X);
 fun_y = @(X) fnval(spl_y,X);
 
-[xx,yy,zz] = meshgrid(-2e-6-2*meshStep:meshStep/10:2e-6+2*meshStep,-2e-6-2*meshStep/10:meshStep:2e-6+2*meshStep,0);
-fineFx = fun_x({-2e-6-2*meshStep:meshStep/10:2e-6+2*meshStep,-2e-6-2*meshStep/10:meshStep:2e-6+2*meshStep})';
-fineFy = fun_y({-2e-6-2*meshStep:meshStep/10:2e-6+2*meshStep,-2e-6-2*meshStep/10:meshStep:2e-6+2*meshStep})';
+[xx,yy,zz] = meshgrid(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,0);
+fineFx = fun_x({-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep})';
+fineFy = fun_y({-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep})';
+
+fineFy(yy==0)=0;
+
 figure(2)
 subplot(1,2,1)
-surf(fineFy,'edgealpha',0)
+%surf(fineFy,'edgealpha',0)
+plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,fineFy(yy==0))
+hold on
+plot(-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,F.Vy(F.Y==0))
+hold off
 subplot(1,2,2)
-surf(F.Vy)
-
+%surf(F.Vy,'edgealpha',0)
+plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,1e8*fineFy(:,1821),'x')
+hold on
+plot(-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,1e8*F.Vy(:,183),'o')
 divF = divergence(xx,yy,fineFx,fineFy);
-divF((xx-x1).^2 + (yy-y1).^2 < (2*a-meshStep)^2 | (xx-x2).^2 + (yy-y2).^2 < (2*a-meshStep)^2)=0; %Cut at particle diameter with an internal grid point
+plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,divF(:,1821))
+%plot(-2e-6-2*meshStep:meshStep:2e-6+2*meshStep,F.Vx(F.Y==0))
+hold off
+
+divF((xx-x1).^2 + (yy-y1).^2 < (2*a-3*meshStep/10)^2 | (xx-x2).^2 + (yy-y2).^2 < (2*a-3*meshStep/10)^2)=0; %Cut at particle diameter with an internal grid point
 %% Optional: export of the calculated fields
 save('divF_3.mat','divF')
 
 %%
-spl_divF=csapi({-2e-6-2*meshStep:meshStep/10:2e-6+2*meshStep,-2e-6-2*meshStep/10:meshStep:2e-6+2*meshStep},divF');
+spl_divF=csapi({-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep},divF');
 fun_divF = @(X) fnval(spl_divF,X);
 figure(1)
 subplot(2,2,4)
-surf(fun_divF({-2e-6-2*meshStep:meshStep:2e-6+2*meshStep,-2e-6-2*meshStep:meshStep:2e-6+2*meshStep})')
+surf(fun_divF({-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep:2e-6+3*meshStep})','edgealpha',0)
 
+%%
+%%
+zmin = min(min(min(F.Vy)));
+zmax = max(max(max(F.Vy)));
+zinc = (zmax - zmin) / 20;
+zlevs = zmin:zinc:zmax;
+figure(3)
+g=subplot(1,2,1);
+%surf(x*1e+9,y*1e+9,norm(F),'edgealpha',0)
+contourf(x*1e+6,y*1e+6,F.Vy,zlevs);
+hold on
+h=streamslice(F.X(1:20:end,1:20:end)*1e+6,F.Y(1:20:end,1:20:end)*1e+6,F.Vx(1:20:end,1:20:end),F.Vy(1:20:end,1:20:end),4,'method','cubic');
+for i=1:length(h)
+    h(i).LineWidth=1;
+end
+set(h,'Color',[0.6 0.2 0.])
+colormap(g,'parula');
+hold off
+title('F_y and streamlines, xy plane')
+axis equal
+view(2)
+xlabel('x [\mum]')
+ylabel('y [\mum]')
 
+magnitude=norm(F);
+subplot(1,2,2)
+surf(x*1e+6,y*1e+6,magnitude,'edgealpha',0)
+colormap jet
+title('Magnitude of Force, xy plane')
+axis equal
+view(2)
+xlabel('x [\mum]')
+ylabel('y [\mum]')
+
+% magnitude=norm(E1);
+% figure(4)
+% surf(x*1e+9,y*1e+9,magnitude,'edgealpha',0)
+% title('xy plane')
+% axis equal
+% view(2)
+% xlabel('x [nm]')
+% ylabel('y [nm]')
 

@@ -60,7 +60,7 @@ parfor k = 1:targetWorkCount
     
     numDip=2;
     
-    if norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a - 1.5e-7) %For force calculation, add 3 grid points inside
+    if norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a - 3e-7) %For force calculation, add 6 grid points inside
         Ex(k)=0;
         Ey(k)=0;
         Ez(k)=0;
@@ -119,7 +119,7 @@ parfor k = 1:targetWorkCount
         Fy(k)=F_temp.Vy;
         Fz(k)=F_temp.Vz;
         
-        if norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a-1e-7) %For pre-divF force expression, add 2 grid point inside the particle
+        if norm(Point(rx(k),ry(k),rz(k)) - r1)<(2*a-1.5e-7) %For pre-divF force expression, add 3 grid point inside the particle
             Ex(k)=0;
             Ey(k)=0;
             Ez(k)=0;
@@ -167,23 +167,44 @@ fun_y = @(X) fnval(spl_y,X);
 [xx,yy,zz] = meshgrid(-2.1e-6:.5e-8:2.1e-6,-2.1e-6:.5e-8:2.1e-6,0);
 fineFx = fun_x({-2.1e-6:.5e-8:2.1e-6,-2.1e-6:.5e-8:2.1e-6})';
 fineFy = fun_y({-2.1e-6:.5e-8:2.1e-6,-2.1e-6:.5e-8:2.1e-6})';
+
+% Tests on lines
 figure(2)
 subplot(1,2,1)
-surf(fineFy,'edgealpha',0)
+%Test on y=0
+plot(-2.1e-6:.5e-8:2.1e-6,fineFy(yy==0))
+hold on
+plot(-2.1e-6:.5e-7:2.1e-6,F.Vy(F.Y==0))
+hold off
 subplot(1,2,2)
-surf(F.Vy)
-
+%Test on x=2e-7
+plot(-2.1e-6:.5e-8:2.1e-6,1e8*fineFy(:,381),'x')
+hold on
+plot(-2.1e-6:.5e-7:2.1e-6,1e8*F.Vy(:,39),'o')
+hold off
+%% Divergence calculation & fitting
 divF = divergence(xx,yy,fineFx,fineFy);
-divF(xx.^2 + yy.^2 < (2*a-0.5e-7)^2)=0; %Cut at particle diameter with an internal grid point
+divF(xx.^2 + yy.^2 < (2*a - 3*0.05e-7)^2)=0; %Cut at particle diameter with three internal fine grid points
+spl_divF=csapi({-2.1e-6:.5e-8:2.1e-6,-2.1e-6:.5e-8:2.1e-6},divF');
+fun_divF = @(X) fnval(spl_divF,X);
+
 %% Optional: export of the calculated fields
 save('divF.mat','divF')
 
-%%
-spl_divF=csapi({-2.1e-6:.5e-8:2.1e-6,-2.1e-6:.5e-8:2.1e-6},divF');
-fun_divF = @(X) fnval(spl_divF,X);
+%% Test on divergence smoothness
+
 figure(1)
 subplot(2,2,4)
 surf(fun_divF({-2e-6:.5e-7:2e-6,-2e-6:.5e-7:2e-6})')
+
+%Test on line x=2e-7
+figure(3) 
+plot(-2.1e-6:.5e-8:2.1e-6,divF(:,381))
+hold on
+plot(-2.1e-6:.5e-9:2.1e-6,fun_divF([2e-7*ones(1,length(-2.1e-6:.5e-9:2.1e-6));-2.1e-6:.5e-9:2.1e-6]))
+hold off
+
+
 
 
 
