@@ -173,15 +173,12 @@ F = ComplexVector(r.X,r.Y,r.Z,Fx,Fy,Fz);
 
 %% Plotting
 figure(1)
-subplot(2,2,1)
+subplot(1,2,1)
 surf(r.X,r.Y,norm(Et),'edgealpha',0)
-subplot(2,2,2)
-surf(norm(Bt),'edgealpha',0)
-subplot(2,2,3)
+subplot(1,2,2)
 surf(norm(F),'edgealpha',0)
 
 %% Optional: export of the calculated fields
-save('Efield_3.mat','Et')
 save('Force_3.mat','F')
 
 %% Optional: load the calculated fields
@@ -189,8 +186,15 @@ load('Force_3.mat')
 
 %% Spline interpolant
 
-spl_x=csapi({-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep:2e-6+3*meshStep},F.Vx');
-spl_y=csapi({-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep:2e-6+3*meshStep},F.Vy');
+F.Vx((F.X-x1).^2 + (F.Y-y1).^2 < (2*a-3*meshStep)^2 | (F.X-x2).^2 + (F.Y-y2).^2 < (2*a-3*meshStep)^2)=NaN;
+F.Vy((F.X-x1).^2 + (F.Y-y1).^2 < (2*a-3*meshStep)^2 | (F.X-x2).^2 + (F.Y-y2).^2 < (2*a-3*meshStep)^2)=NaN;
+
+idxgood=~(isnan(F.Vx) | isnan(F.Vy));
+FxG = griddata(x(idxgood),y(idxgood),F.Vx(idxgood),x,y,'natural');
+FyG = griddata(x(idxgood),y(idxgood),F.Vy(idxgood),x,y,'natural');
+
+spl_x=csapi({-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep:2e-6+3*meshStep},FxG');
+spl_y=csapi({-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep:2e-6+3*meshStep},FyG');
 
 fun_x = @(X) fnval(spl_x,X);
 fun_y = @(X) fnval(spl_y,X);
@@ -198,38 +202,54 @@ fun_y = @(X) fnval(spl_y,X);
 [xx,yy,zz] = meshgrid(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,0);
 fineFx = fun_x({-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep})';
 fineFy = fun_y({-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep})';
-
-fineFy(yy==0)=0;
-
-figure(2)
-subplot(1,2,1)
-%surf(fineFy,'edgealpha',0)
-plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,fineFy(yy==0))
-hold on
-plot(-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,F.Vy(F.Y==0))
-hold off
-subplot(1,2,2)
-%surf(F.Vy,'edgealpha',0)
-plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,1e8*fineFy(:,1821),'x')
-hold on
-plot(-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,1e8*F.Vy(:,183),'o')
 divF = divergence(xx,yy,fineFx,fineFy);
-plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,divF(:,1821))
-%plot(-2e-6-2*meshStep:meshStep:2e-6+2*meshStep,F.Vx(F.Y==0))
-hold off
-
-divF((xx-x1).^2 + (yy-y1).^2 < (2*a-3*meshStep/10)^2 | (xx-x2).^2 + (yy-y2).^2 < (2*a-3*meshStep/10)^2)=0; %Cut at particle diameter with an internal grid point
-%% Optional: export of the calculated fields
-save('divF_3.mat','divF')
-
-%%
 spl_divF=csapi({-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep},divF');
 fun_divF = @(X) fnval(spl_divF,X);
-figure(1)
-subplot(2,2,4)
-surf(fun_divF({-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,-2e-6-3*meshStep:meshStep:2e-6+3*meshStep})','edgealpha',0)
+%% Optional: export of the calculated fields
+save('Force_3.mat','F')
+save('ForceGx_3.mat','FxG')
+save('ForceGy_3.mat','FyG')
+save('divF_3.mat','divF')
+%% Testing fineFx & fineFy on y=0 and x=-0.1979 (intersection point)
+figure(2)
+subplot(2,2,1)
+plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,fineFx(yy==0))
+hold on
+plot(-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,F.Vx(F.Y==0),'o')
+hold off
 
-%%
+subplot(2,2,2)
+plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,fineFx(:,1833))
+hold on
+plot(-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,F.Vx(:,185),'o')
+hold off
+
+subplot(2,2,3)
+plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,fineFy(yy==0))
+hold on
+plot(-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,F.Vy(F.Y==0),'o')
+hold off
+
+subplot(2,2,4)
+plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,fineFy(:,1833))
+hold on
+plot(-2e-6-3*meshStep:meshStep:2e-6+3*meshStep,F.Vy(:,185),'o')
+hold off
+
+%% Testing divF on y=0 and x=-0.1979 (intersection point)
+divF((xx-x1).^2 + (yy-y1).^2 < (2*a)^2 | (xx-x2).^2 + (yy-y2).^2 < (2*a)^2)=NaN; %Cut at particle diameter with an internal grid point
+edge=-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep;
+subplot(1,2,1)
+plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,divF(yy==0))
+hold on
+plot(edge,1e-4+fun_divF([edge;zeros(1,length(edge))]))
+hold off
+subplot(1,2,2)
+plot(-2e-6-3*meshStep:meshStep/10:2e-6+3*meshStep,divF(:,1833))
+hold on
+plot(edge,1e-4+fun_divF([0.1980e-6*ones(1,length(edge));edge]))
+hold off
+
 %%
 zmin = min(min(min(F.Vy)));
 zmax = max(max(max(F.Vy)));
