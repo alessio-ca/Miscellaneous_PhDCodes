@@ -4,22 +4,23 @@ close all;
 clc;
 
 %% Parameters
-dx = 5e-9;
-dy = 5e-9;
-dz = 5e-9;
-Lx = 1500e-9;
-Ly = 1500e-9;
-Lz = 1500e-9;
+dx = 1e-9;
+dy = 1e-9;
+dz = 1e-9;
+Lx = 2000e-9;
+Ly = 2000e-9;
+Lz = 20000e-9;
 
 L = 32;
 
 %% Dipole
 
-ep = 2.25;
-a = 250e-9;
+ep = 1.60^2;
+a = 0.527e-6/2;
 lambda0 = 1064e-9;
-alpharc = InducedDipole.polarizability('radiative correction',a,ep,'lambda0',lambda0);
-id = InducedDipole(alpharc,lambda0);
+nm = 1.33;
+alpharc = InducedDipole.polarizability('corrected',a,ep,'lambda0',lambda0,'em',nm^2);
+id = InducedDipole(alpharc,lambda0,'er',nm.^2);
 
 
 %% Setup in POM 0.26
@@ -32,7 +33,6 @@ id = InducedDipole(alpharc,lambda0);
 w0 = 10.7e-3;
 Ex0 = 1;
 Ey0 = 0;
-nm = 1.33;
 NA = 1.20;
 f = 200e-3/60;
 R = f*NA/nm;
@@ -42,14 +42,14 @@ f = nm*R/NA;
 
 Nphi = 16;
 Nr = 10;
-bg = BeamGauss(Ex0,Ey0,w0,R,Nphi,Nr,'lambda0',1064e-9);
-bg = bg.normalize(60*64*2/10000);
-ef = EFieldFocus(bg,f,'lambda0',1064e-9,'er',1.33^2);
+bg = BeamGauss(Ex0,Ey0,w0,R,Nphi,Nr,'lambda0',lambda0,'er',nm^2);
+bg = bg.normalize(60*64*2/(100*100));
+ef = EFieldFocus(bg,f,'lambda0',1064e-9,'er',nm^2);
 
 %% Field
 
-[X,Y,Z] = meshgrid([-Lx:dx:Lx],[-Ly:dy:Ly],0);
-E= ef.E(Point(X,Y,Z),'er',1.33.^2);
+[X,Y,Z] = meshgrid(-Lx:dx:Lx,-Ly:dy:Ly,0);
+E= ef.E(Point(X,Y,Z),'lambda0',lambda0,'er',nm^2);
 I = .5*PhysConst.c0/nm*(nm^2*PhysConst.e0)*norm(E).^2;
 %%
 figure(1)
@@ -58,22 +58,27 @@ shading flat
 axis auto
 %% Forces
 
-[X,Y,Z] = meshgrid([-Lx:10*dx:Lx],[-Ly:10*dy:Ly],0);
+[X,Y,Z] = meshgrid(-Lx:10*dx:Lx,-Ly:10*dy:Ly,0);
 r = Point(X,Y,Z);
 [F,Fgrad,Fscat,Fsc] = id.force(r,ef);
 
 %%
 figure(2)
 subplot(1,2,1)
-hold on
 plot(F.X((length(X)-1)/2,:),F.Vx((length(X)-1)/2,:))
+hold on
+plot(F.Y(:,(length(X)-1)/2),F.Vy(:,(length(X)-1)/2))
 hold off
 
-pp = csapi(F.X((length(X)-1)/2,:),F.Vx((length(X)-1)/2,:));
-ipp=fnint(pp);
-dpp=fnder(pp);
+pp_x = csapi(F.X((length(X)-1)/2,:),F.Vx((length(X)-1)/2,:));
+pp_y = csapi(F.Y(:,(length(X)-1)/2),F.Vy(:,(length(X)-1)/2));
+
+ipp_x=fnint(pp_x);
+ipp_y=fnint(pp_y);
+
 
 subplot(1,2,2)
+plot(F.X((length(X)-1)/2,:),-fnval(ipp_x,F.X((length(X)-1)/2,:)))
 hold on
-plot(F.X((length(X)-1)/2,:),fnval(dpp,F.X((length(X)-1)/2,:)))
+plot(F.Y(:,(length(X)-1)/2),-fnval(ipp_y,F.Y(:,(length(X)-1)/2)))
 hold off

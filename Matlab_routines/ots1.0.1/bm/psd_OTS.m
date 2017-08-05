@@ -74,7 +74,7 @@ psd_err = std(psd_vec,0,2);
 
 % Blocking
 if strcmpi(blocking,'lin')
-    
+    tic
     % Centers of bins
     binscenters = [fmin:(fmax-fmin)/binsnumber:fmax];
     
@@ -82,7 +82,7 @@ if strcmpi(blocking,'lin')
     binswidths(1) = (binscenters(2)-binscenters(1))/2;
     binswidths(2:length(binscenters)-1) = (binscenters(3:end)-binscenters(1:end-2))/4;
     binswidths(length(binscenters)) = (binscenters(end)-binscenters(end-1))/2;
-    tic
+    
     f_b = zeros(size(binscenters));
     psd_b = zeros(size(binscenters));
     psd_err_b = zeros(size(binscenters));

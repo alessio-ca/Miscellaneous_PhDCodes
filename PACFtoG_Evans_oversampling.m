@@ -94,7 +94,7 @@ hold on
 semilogx(t_downsample,data_downsample(:,1),'s','MarkerEdgeColor','k','MarkerFaceColor',[0 0 1],'MarkerSize',10)
 spline_downsample = fnval(t_downsample,data_spline);
 h=semilogx(t_downsample',spline_downsample(1,:),'--k');
-set(get(get(h,'Annotation'),'LegendInformation'),'IconDisplayStyle','off');
+%set(get(get(h,'Annotation'),'LegendInformation'),'IconDisplayStyle','off');
 legend('ACF','Log-sampling','Location','northeast')
 xlabel('Time (s)')
 ylabel('A(t)')
@@ -124,6 +124,10 @@ maxfreq=fps/(2*resfreq);
 omega=2*pi*resfreq*logspace(log10(minfreq),log10(maxfreq),100)';
 t_oversample=(1/(beta*fps):1/(beta*fps):t_downsample(end))';
 data_oversample=fnval(t_oversample,data_spline)';
+
+if size(data_oversample,1)==1
+    data_oversample=data_oversample';
+end
 
 
 %Evans_fft is composed of three single terms and a summatory (see Evans et

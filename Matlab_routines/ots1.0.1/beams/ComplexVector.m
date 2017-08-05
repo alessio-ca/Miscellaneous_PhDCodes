@@ -56,13 +56,13 @@ classdef ComplexVector < Vector
             %
             % See also ComplexVector, Vector.
             
-            Check.isreal('X must be a real scalar matrix',X)
-            Check.isreal('Y must be a real scalar matrix',Y)
-            Check.isreal('Z must be a real scalar matrix',Z)
-            Check.isnumeric('Vx must be a complex scalar matrix',Vx)
-            Check.isnumeric('Vy must be a complex scalar matrix',Vy)
-            Check.isnumeric('Vz must be a complex scalar matrix',Vz)
-            Check.samesize('X, Y, Z, Vx, Vy and Vz must have the same size.',X,Y,Z)
+            %Check.isreal('X must be a real scalar matrix',X)
+            %Check.isreal('Y must be a real scalar matrix',Y)
+            %Check.isreal('Z must be a real scalar matrix',Z)
+            %Check.isnumeric('Vx must be a complex scalar matrix',Vx)
+            %Check.isnumeric('Vy must be a complex scalar matrix',Vy)
+            %Check.isnumeric('Vz must be a complex scalar matrix',Vz)
+            %Check.samesize('X, Y, Z, Vx, Vy and Vz must have the same size.',X,Y,Z)
 
             v = v@Vector(X,Y,Z,zeros(size(Vx)),zeros(size(Vy)),zeros(size(Vz)));
             v.Vx = Vx;

@@ -1,4 +1,4 @@
-folder = 'F:\AC_2017_05_19\ME_F108_SiOil_Frames';
+folder = 'F:\AC_2017_03_16\ODSizeDistro_oldsample_Frames';
 listFrames = dir(folder);
 listFrames = listFrames([listFrames.isdir]==0);
 diami = [];
@@ -9,4 +9,4 @@ for i=1:length(listFrames)
     diami = [diami;DropletDetector(img,50,400,'canny',[0.4,5.])];
 end
 %%
-histogram(diami*(100/169.33))
+%histogram(diami*(100/169.33))

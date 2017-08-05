@@ -49,10 +49,10 @@ classdef Point < Shape
             %
             % See also Point.
             
-            Check.isreal('X must be a real scalar matrix',X)
-            Check.isreal('Y must be a real scalar matrix',Y)
-            Check.isreal('Z must be a real scalar matrix',Z)
-            Check.samesize('X, Y and Z must have the same size.',X,Y,Z)
+            %Check.isreal('X must be a real scalar matrix',X)
+            %Check.isreal('Y must be a real scalar matrix',Y)
+            %Check.isreal('Z must be a real scalar matrix',Z)
+            %Check.samesize('X, Y and Z must have the same size.',X,Y,Z)
             
             p.X = X;
             p.Y = Y;

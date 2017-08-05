@@ -55,13 +55,13 @@ classdef Vector < Point
             %
             % See also Vector, Point.
             
-            Check.isreal('X must be a real scalar matrix',X)
-            Check.isreal('Y must be a real scalar matrix',Y)
-            Check.isreal('Z must be a real scalar matrix',Z)
-            Check.isreal('Vx must be a real scalar matrix',Vx)
-            Check.isreal('Vy must be a real scalar matrix',Vy)
-            Check.isreal('Vz must be a real scalar matrix',Vz)
-            Check.samesize('X, Y, Z, Vx, Vy and Vz must have the same size.',X,Y,Z)
+            %Check.isreal('X must be a real scalar matrix',X)
+            %Check.isreal('Y must be a real scalar matrix',Y)
+            %Check.isreal('Z must be a real scalar matrix',Z)
+            %Check.isreal('Vx must be a real scalar matrix',Vx)
+            %Check.isreal('Vy must be a real scalar matrix',Vy)
+            %Check.isreal('Vz must be a real scalar matrix',Vz)
+            %Check.samesize('X, Y, Z, Vx, Vy and Vz must have the same size.',X,Y,Z)
 
             v = v@Point(X,Y,Z);
             v.Vx = Vx;
