@@ -20,7 +20,7 @@ function [omega,G,G_err,G_vec]=PACFtoG_Evans_oversampling(t,data,fps,varargin)
 %       TauMax      -   Maximum time delay to be considered (default = +Inf)
 %       f0          -   Value of f(t) at t=0 (default = 1)
 %       fpinf       -   Value of f(t) at t->Inf (default = 0)
-%       CG          -   Coarse-graining factor (default = 1.2)
+%       CG          -   Coarse-graining factor (default = 1.45)
 %       Beta        -   Oversampling factor (default = 100)
 %       Gfactor     -   Multiplication factor for G* (default = 1)
 
@@ -44,7 +44,7 @@ for n = 1:2:length(varargin)
         fpinf = varargin{n+1};
     end
 end
-CG = 1.2;
+CG = 1.45;
 for n = 1:2:length(varargin)
     if strcmpi(varargin{n},'CG')
         CG = varargin{n+1};
