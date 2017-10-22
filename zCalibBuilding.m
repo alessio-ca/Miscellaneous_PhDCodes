@@ -6,7 +6,7 @@
 %     copyfile([direcZseries,'\zcalib\',listSeries(i).name,'\*_000000.tiff'],[direcZseries,'\dircalib'])
 % end
 
-direcZseries='F:\AC_2017_05_24\';
+direcZseries='J:\';
 picdir = 'ME_SiOil_F108_12VStir\';
 framedir = 'ME_F108_SiOil_Frames';
 mkdir(direcZseries,framedir);

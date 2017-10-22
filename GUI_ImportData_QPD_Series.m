@@ -14,7 +14,7 @@ numFiles = length(listings);
 %Add imports to a cell array
 dataTot = cell(1,numFiles);
 
-for fileNum = 1:numFiles
+parfor fileNum = 1:numFiles
     fileName = listings(fileNum).name;
     dataTot{fileNum} = QPD_import_PicoScope([folder_name,'/',fileName],3);
 end
@@ -36,7 +36,8 @@ disp('Data imported. Saving...')
 
 %Save array in mat form in parent directory
 [path,name]=fileparts(folder_name);
-save([path,'/',name,'.mat'],'dataTot')
+save([path,'/',name,'.mat'],'dataTot','-v6')
+
 
 disp('Done!');
 

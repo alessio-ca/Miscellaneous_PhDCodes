@@ -17,18 +17,15 @@
 %Filter syntax:
 %rMax,rMid and rMin are mandatory and must be positive
 %int1,int2 and int3 are optional
-%Background intensity is always 1
-%Outer rim is int1+1
-%Mid rim is 1+int1-int2
-%Inner rim is 1+int1-int2+int4
+%Background intensity is always 0
+%Outer rim is int1
+%Mid rim is int2
+%Inner rim is int3
 %
-%Default is: 1 (outer rim = 2)
-%            2 (mid rim = 0)
+%Default is: 1 (outer rim = 1)
+%            -2 (mid rim = -2)
 %            4 (inner rim = 4)
 %
-%If you wish an inverted image (black center and bright corona), simply
-%type negative intensities (ex: -1 -2 -4 produces an inverted filter of
-%the default one)
 
 
 close all
@@ -56,7 +53,22 @@ for i=1:length(list)
     img=squeeze(movie2frame(filename,offset,1));
     if  i==1
         [filter_list{1,1},filter_list{1,2},r_max]=CreateFilter(img);
+    else
+        count = CheckFilter(img,filter_list);
+        if count > 0 
+            filter_TEMP = filter_list{1,1};
+            filter_pres_TEMP = filter_list{1,2};
+            filter_list{1,1} = filter_list{count,1};
+            filter_list{1,2} = filter_list{count,2};
+            filter_list{count,1} = filter_TEMP;
+            filter_list{count,2} = filter_pres_TEMP;
+        else
+            disp('Filters from previous iteration are not satisfactory. Define new filter.');
+            filter_list = [filter_list(1,:);filter_list];
+            [filter_list{1,1},filter_list{1,2},r_max]=CreateFilter(img);
+        end
     end
+            
     
     
     %The movie2frame routine processes all the file by default. Modify as

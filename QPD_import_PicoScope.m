@@ -1,13 +1,13 @@
 function data = QPD_import_PicoScope(filename, startRow, endRow)
 %IMPORTFILE Import numeric data from a text file as column vectors.
-%   [X,Y] = IMPORTFILE(FILENAME) Reads data from text file FILENAME for the
+%   data = IMPORTFILE(FILENAME) Reads data from text file FILENAME for the
 %   default selection.
 %
-%   [X,Y] = IMPORTFILE(FILENAME, STARTROW, ENDROW) Reads data from rows
+%   data = IMPORTFILE(FILENAME, STARTROW, ENDROW) Reads data from rows
 %   STARTROW through ENDROW of text file FILENAME.
 %
 % Example:
-%   [X,Y] = importfile('08_06_2017 03_38_57.csv',3, 1000004);
+%   data = importfile('08_06_2017 03_38_57.csv',3, 1000004);
 %
 %    See also TEXTSCAN.
 

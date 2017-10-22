@@ -4,6 +4,7 @@ function diami = DropletDetector(img,lowDiam,highDiam,varargin)
 %   - Low pass diam (default = 10)
 %   - Canny param (Threshold, Gamma) (default = [0.4,1.])
 %   - dilation diam (default = 1)
+%   - radius correction factor (default = 1.075)
 
 
 lpDiam = 10;
@@ -28,6 +29,14 @@ for n = 1:2:length(varargin)
         dilDiam = varargin{n+1};
     end
 end
+
+radCorr = 1.075;
+for n = 1:2:length(varargin)
+    if strcmpi(varargin{n},'Rad')
+        radCorr = varargin{n+1};
+    end
+end
+
 
 %Contrast enhancement
 imgJ=adapthisteq(img);
@@ -70,6 +79,7 @@ for j=1:ND_temp
     k=convhull(x,y);
     XY=[x(k),y(k)];
     [~,RC]=fitcircle(XY);
+    RC = radCorr*RC;
     if(2*RC < lowDiam || 2*RC > highDiam || ... %Check on size
             any(XY(:)<10) || ... %Check on low border
             any(XY(:,1) > size(bw4,2)-10) || ... %Check on high border, coord1

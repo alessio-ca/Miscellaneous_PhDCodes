@@ -1,6 +1,13 @@
 clear all;
 %img=imread('F:\AC_2017_03_13\ODSizeDistro_Frames\40x_0.95_PS_FPS20_ODsizedistrostudy.13Mar2017_17.57.06_000000.tiff');
-img=imread('F:\AC_2017_05_19\ME_F108_SiOil_Frames\10x_0.45_ODs_ME_Tw20_SunOil.19May2017_18.48.18_000000.tiff');
+img=imread('J:\ME_F108_SiOil_Frames\10x_0.45NA_ODs_ME_SiOil_F108_10Vstir_0.1mLPerHour.02Oct2017_20.51.26_000000.tiff');
+
+%Detector parameters (see sections)
+lpDiam = 10;
+CannyParam = [0.6,7.];
+dilDiam = 5;
+radCorr = 1.3;
+
 
 %Contrast enhancement
 imgJ=adapthisteq(img);
@@ -17,7 +24,7 @@ imhist(imgJ,64)
 %Low-pass filtering and high-pass filtering
 %Typical values for fspecial:
 % - 10
-h = fspecial('disk',10);
+h = fspecial('disk',lpDiam);
 imgJ2 = imfilter(imgJ,h);
 imgJ3 = imsubtract(imgJ2,imgJ);
 imgJ4 = adapthisteq(imgJ3);
@@ -30,10 +37,13 @@ imshowpair(imgJ2,imgJ4,'montage')
 %Typical values for edge:
 % - 0.4,1.
 % - 0.4,5.
+% - 0.6,1.
+% - 0.6,7.
 %Typical values for strel:
 % - 1
-bw=edge(imgJ4,'canny',0.4,5);
-se=strel('disk',1);
+% - 5
+bw=edge(imgJ4,'canny',CannyParam(1),CannyParam(2));
+se=strel('disk',dilDiam);
 bw2=imdilate(bw,se);
 
 figure(4)
@@ -75,7 +85,7 @@ for j=1:ND_temp
     k=convhull(x,y);
     XY=[x(k),y(k)];
     [CC,RC]=fitcircle(XY);
-    RC=1.075*RC;
+    RC=radCorr*RC;
     if(2*RC < mindiam || 2*RC > maxdiam || ... %Check on size
             any(XY(:) < 10) || ... %Check on low border
             any(XY(:,1) > size(bw4,2)-10) || ... %Check on high border, coord1
