@@ -1,4 +1,4 @@
-function [tau,MSD,MSD_vec]=DWS_Analysis(t,data,varargin)
+function [tau,MSD,ACF,MSD_vec,ACF_vec]=DWS_Analysis(t,data,varargin)
 % DWS_Analysis Estimation of MSD and G* from DWS autocorrelation
 % data
 %
@@ -20,6 +20,8 @@ function [tau,MSD,MSD_vec]=DWS_Analysis(t,data,varargin)
 %       n       -   Solvent refractive index (default = 1.33)
 %       tail    -   Fit times for tail characterization (default =
 %       [0,0] i.e. no tail correction)
+%       fitmeth -   Fit method used (default = "CON")
+%       Allowed methods: CON (CONTIN), RAT (rational fit)
 
 
 % CREATED: Alessio Caciagli, University of Cambridge, October 2017
@@ -47,6 +49,12 @@ for i = 1:2:length(varargin)
         tail = varargin{i+1};
     end
 end
+fitmeth = 'CON';
+for i = 1:2:length(varargin)
+    if strcmpi(varargin{i},'fit')
+        fitmeth = varargin{i+1};
+    end
+end
 %% Constants
 kB = 1.38*10^(-23);
 lambda = 685*10^(-9); %Laser wavelength
@@ -59,7 +67,7 @@ R = 115e-9; %Bead radius
 
 alpha = 1e-2;
 I_vec = zeros(100,size(data,2));
-
+fit_vec = zeros(7,size(data,2));
 for j = 1:size(data,2)
     
     %Delete first 2 points (usually noise) & format data
@@ -83,43 +91,71 @@ for j = 1:size(data,2)
         beta = 1;
     end
     dataTemp = sqrt(ACF_ToFit(1:CritPts))/sqrt(beta);
-
-    %CONTIN loop run
-    coarse_s = logspace(-6,-1,10)';
-    coarse_g = ones(size(coarse_s));
-    [coarse_g,~,~] = CONTIN_Rilt(tTemp,dataTemp,coarse_s,coarse_g,alpha,'logarithmic',100,[],[],[],[],[]);
-    for i = 2:10
-        s = logspace(-6,-1,i*10)';
-        g0 = interp1(coarse_s,coarse_g,s,'linear');
-        [g,~,~] = CONTIN_Rilt(tTemp,dataTemp,s,g0,alpha,'logarithmic',100,[],[],[],[],[]);
-        coarse_g = g;
-        coarse_s = s;
+    
+    if fitmeth == 'CON'
+        %CONTIN loop run
+        
+        coarse_s = logspace(-6,-1,10)';
+        coarse_g = ones(size(coarse_s));
+        [coarse_g,~,~] = CONTIN_Rilt(tTemp,dataTemp,coarse_s,coarse_g,alpha,'logarithmic',100,[],[],[],[],[]);
+        for i = 2:10
+            disp(['Iteration: ',num2str(i)])
+            s = logspace(-6,-1,i*10)';
+            g0 = interp1(coarse_s,coarse_g,s,'linear');
+            [g,~,~] = CONTIN_Rilt(tTemp,dataTemp,s,g0,alpha,'logarithmic',100,[],[],[],[],[]);
+            coarse_g = g;
+            coarse_s = s;
+            disp(' ')
+        end
+        I_vec(:,j) = g;
+    elseif fitmeth == 'RAT'
+        %Rational fit loop run
+        U = tTemp;
+        Z = dataTemp.*tTemp;
+        V = dataTemp.*tTemp.^2;
+        F = dataTemp.*tTemp.^3;
+        K = dataTemp;
+        A = [U,ones(length(U),1),-V,-Z,-K];
+        Coeff = A\F;
+        fo = fitoptions('rat33');
+        fo.StartPoint = [0,0,Coeff'];
+        my_fit = fit(tTemp,dataTemp,'rat33',fo);
+        fit_vec(:,j) = coeffvalues(my_fit);
     end
-    I_vec(:,j) = g;
 end
 close all
 I_vec = I_vec./sum(I_vec,1);
 %%
-tFit = logspace(-6,-1)';
-dataFit = zeros(length(tFit),size(data,2));
-for i = 1:length(tFit)
-    dataFit(i,:) = sum(I_vec.*exp(-tFit(i)./s),1);
+tFit = logspace(-6,ceil(log10(tTemp(end))))';
+ACF_vec = zeros(length(tFit),size(data,2));
+if fitmeth == 'CON'
+    for i = 1:length(tFit)
+        ACF_vec(i,:) = sum(I_vec.*exp(-tFit(i)./s),1);
+    end
+elseif fitmeth == 'RAT'
+    fit_33 = @(x) (fit_vec(1,:).*x.^3 + fit_vec(2,:).*x.^2 + fit_vec(3,:).*x + fit_vec(4,:))./(x.^3 + fit_vec(5,:).*x.^2 + fit_vec(6,:).*x + fit_vec(7,:));
+    ACF_vec = fit_33(tFit)./(fit_vec(4,:)./fit_vec(7,:));
+    if any(ACF_vec(end,:) < 0)
+        ACF_vec = (ACF_vec - 2*min(ACF_vec))./(1 -  2*min(ACF_vec));
+    end
 end
+ACF = mean(ACF_vec,2);
 %% MSD calculation
 g1_an = @(x) (L/l_star + 4/3)/(5/3) * (sinh(x) + (2/3)*x*cosh(x)) / ...
     ((1 + (4/9)*x^2)*sinh((L/l_star)*x) + (4/3)*x*cosh((L/l_star)*x));
-x0 = sqrt(-3*log(dataFit))./(L/l_star);
+x0 = sqrt(-3*log(ACF_vec))./(L/l_star);
 xAcc = zeros(size(x0));
 
 for i = 1:length(x0)
     for j = 1:size(x0,2)
-        fun = @(x) g1_an(x) - dataFit(i,j);
+        fun = @(x) g1_an(x) - ACF_vec(i,j);
         xAcc(i,j) = fzero(fun,x0(i,j));
     end
 end
 
 tau = tFit;
-MSD_vec = 0.33 * (xAcc + x0).^2/k0^2;
+%MSD_vec = 0.33 * (xAcc + x0).^2/k0^2;
+MSD_vec = 0.25 * (xAcc + xAcc).^2/k0^2;
 MSD = mean(MSD_vec,2);
 %MSDFit_Spl = csape(tFit',MSD_vec');
 % %% Microrheology

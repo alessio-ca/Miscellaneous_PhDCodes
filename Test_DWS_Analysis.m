@@ -36,4 +36,4 @@ g1_an = @(x) (L/l_star + 4/3)/(5/3) .* (sinh(x) + (2/3).*x.*cosh(x)) ./ ...
     ((1 + (4/9).*x.^2).*sinh((L/l_star).*x) + (4/3).*x.*cosh((L/l_star).*x));
 tDWS = logspace(-6,1,300)';
 g2DWS = g1_an(sqrt(k0^2 * 6 * D * tDWS)).^2;
-[tau,MSD]=DWS_Analysis(tDWS,g2DWS);
+[tau,MSD]=DWS_Analysis(tDWS,g2DWS,'fit','RAT');
