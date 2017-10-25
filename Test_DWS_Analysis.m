@@ -9,6 +9,8 @@ L = 2e-3; %Cuvette thickness
 l_star = 401.87e-6; %Mean free path
 k0 = 2*pi*n/lambda;
 R = 0.5e-6; %Bead radius
+rho = 1.04; %Bead density (in g/cm^3)
+m = 1e3*rho*(4/3)*pi*R^3; %Bead mass (in Kg)
 D = kB*T/(6*pi*eta*R);
 k = 1e-6; %Trap Stiffness
 lambda_rel = k/(6*pi*eta*R);
@@ -36,4 +38,31 @@ g1_an = @(x) (L/l_star + 4/3)/(5/3) .* (sinh(x) + (2/3).*x.*cosh(x)) ./ ...
     ((1 + (4/9).*x.^2).*sinh((L/l_star).*x) + (4/3).*x.*cosh((L/l_star).*x));
 tDWS = logspace(-6,1,300)';
 g2DWS = g1_an(sqrt(k0^2 * 6 * D * tDWS)).^2;
-[tau,MSD]=DWS_Analysis(tDWS,g2DWS,'fit','RAT');
+[tau_CON,MSD_CON]=DWS_Analysis(tDWS,g2DWS,'fit','CON');
+[tau_RAT,MSD_RAT]=DWS_Analysis(tDWS,g2DWS,'fit','RAT');
+[tau_SPL,MSD_SPL]=DWS_Analysis(tDWS,g2DWS,'fit','SPL');
+%%
+loglog(tau_CON,MSD_CON,tau_RAT,MSD_RAT,tau_SPL,MSD_SPL,tau_CON,6*D*tau_CON,'k--')
+
+%% TEST ON MAXWELL: DWS ROUTINE
+g1_an = @(x) (L/l_star + 4/3)/(5/3) .* (sinh(x) + (2/3).*x.*cosh(x)) ./ ...
+    ((1 + (4/9).*x.^2).*sinh((L/l_star).*x) + (4/3).*x.*cosh((L/l_star).*x));
+tDWS = logspace(-10,1,300)';
+tau_Max = eta/1e2;
+tau_Br = m/(6*pi*eta*R);
+ACF_DWS = (3*kB*T/m)*exp(-tDWS/(2*tau_Max)) .* ...
+    (cos(sqrt(4*(tau_Max/tau_Br) - 1)/(2*tau_Max)*tDWS) ...
+    + 1/sqrt(4*(tau_Max/tau_Br) - 1) * sin(sqrt(4*(tau_Max/tau_Br) - 1)/(2*tau_Max)*tDWS) ...
+    );
+MSD_DWS = (6*kB*T/m)*(...
+    tau_Br*tDWS + tau_Br*(tau_Br - tau_Max) ...
+    * (exp(-tDWS/(2*tau_Max)) .* cos(sqrt(4*(tau_Max/tau_Br) - 1)/(2*tau_Max)*tDWS) - 1) ...
+    + 1/4 * tau_Br^2 * exp(-tDWS/(2*tau_Max)) .* sin(sqrt(4*(tau_Max/tau_Br) - 1)/(2*tau_Max)*tDWS) ...
+    * (1/sqrt(4*(tau_Max/tau_Br) - 1) - 3*sqrt(4*(tau_Max/tau_Br) - 1)) ...
+    );
+%g2DWS = g1_an(sqrt(k0^2 * (kB*T)/(pi*R) * JDWS)).^2;
+%[tau_CON,MSDMAX_CON]=DWS_Analysis(tDWS,g2DWS,'fit','CON');
+%[tau_RAT,MSDMAX_RAT]=DWS_Analysis(tDWS,g2DWS,'fit','RAT');
+%[tau_SPL,MSDMAX_SPL]=DWS_Analysis(tDWS,g2DWS,'fit','SPL');
+%%
+loglog(tau_CON,MSDMAX_CON,tau_RAT,MSDMAX_RAT,tau_SPL,MSDMAX_SPL,tau_CON,(kB*T)/(pi*R) * (tau_CON/eta + 1/1e2),'k--')

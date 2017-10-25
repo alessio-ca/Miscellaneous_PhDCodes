@@ -21,7 +21,7 @@ function [tau,MSD,ACF,MSD_vec,ACF_vec]=DWS_Analysis(t,data,varargin)
 %       tail    -   Fit times for tail characterization (default =
 %       [0,0] i.e. no tail correction)
 %       fitmeth -   Fit method used (default = "CON")
-%       Allowed methods: CON (CONTIN), RAT (rational fit)
+%       Allowed methods: CON (CONTIN), RAT (rational fit), SPL (spline)
 
 
 % CREATED: Alessio Caciagli, University of Cambridge, October 2017
@@ -63,11 +63,12 @@ l_star = 401.87e-6; %Transport mean free path
 k0 = 2*pi*n/lambda;
 R = 115e-9; %Bead radius
 
-%% g1(tau) calc. and multiexponential fit to g1(tau) (for smoothness)
+%% g1(tau) calc. and fit to g1(tau) (for smoothness)
 
 alpha = 1e-2;
-I_vec = zeros(100,size(data,2));
+I_vec = ones(100,size(data,2));
 fit_vec = zeros(7,size(data,2));
+
 for j = 1:size(data,2)
     
     %Delete first 2 points (usually noise) & format data
@@ -92,54 +93,80 @@ for j = 1:size(data,2)
     end
     dataTemp = sqrt(ACF_ToFit(1:CritPts))/sqrt(beta);
     
-    if fitmeth == 'CON'
-        %CONTIN loop run
-        
-        coarse_s = logspace(-6,-1,10)';
-        coarse_g = ones(size(coarse_s));
-        [coarse_g,~,~] = CONTIN_Rilt(tTemp,dataTemp,coarse_s,coarse_g,alpha,'logarithmic',100,[],[],[],[],[]);
-        for i = 2:10
-            disp(['Iteration: ',num2str(i)])
-            s = logspace(-6,-1,i*10)';
-            g0 = interp1(coarse_s,coarse_g,s,'linear');
-            [g,~,~] = CONTIN_Rilt(tTemp,dataTemp,s,g0,alpha,'logarithmic',100,[],[],[],[],[]);
-            coarse_g = g;
-            coarse_s = s;
-            disp(' ')
-        end
-        I_vec(:,j) = g;
-    elseif fitmeth == 'RAT'
-        %Rational fit loop run
-        U = tTemp;
-        Z = dataTemp.*tTemp;
-        V = dataTemp.*tTemp.^2;
-        F = dataTemp.*tTemp.^3;
-        K = dataTemp;
-        A = [U,ones(length(U),1),-V,-Z,-K];
-        Coeff = A\F;
-        fo = fitoptions('rat33');
-        fo.StartPoint = [0,0,Coeff'];
-        my_fit = fit(tTemp,dataTemp,'rat33',fo);
-        fit_vec(:,j) = coeffvalues(my_fit);
+    switch fitmeth
+        case 'CON'
+            %CONTIN loop run          
+            coarse_s = logspace(-6,-1,10)';
+            coarse_g = ones(size(coarse_s));
+            [coarse_g,~,~] = CONTIN_Rilt(tTemp,dataTemp,coarse_s,coarse_g,alpha,'logarithmic',100,[],[],[],[],[]);
+            for i = 2:10
+                disp(['Iteration: ',num2str(i)])
+                s = logspace(-6,-1,i*10)';
+                g0 = interp1(coarse_s,coarse_g,s,'linear');
+                [g,~,~] = CONTIN_Rilt(tTemp,dataTemp,s,g0,alpha,'logarithmic',100,[],[],[],[],[]);
+                coarse_g = g;
+                coarse_s = s;
+                disp(' ')
+            end
+            I_vec(:,j) = g;
+            I_vec = I_vec./repmat(sum(I_vec,1),[length(I_vec),1]);
+            
+        case 'RAT'
+            %Rational fit loop run
+            U = tTemp;
+            Z = dataTemp.*tTemp;
+            V = dataTemp.*tTemp.^2;
+            F = dataTemp.*tTemp.^3;
+            K = dataTemp;
+            A = [U,ones(length(U),1),-V,-Z,-K];
+            Coeff = A\F;
+            fo = fitoptions('rat33');
+            fo.StartPoint = [0,0,Coeff'];
+            my_fit = fit(tTemp,dataTemp,'rat33',fo);
+            fit_vec(:,j) = coeffvalues(my_fit);
+            
+        case 'SPL'
+            %Spline fitting
+            data_spline=csape(tTemp',dataTemp');
+            
+        otherwise
+            error('Error: Unrecognized fit method.');
     end
 end
 close all
-I_vec = I_vec./sum(I_vec,1);
 %%
-tFit = logspace(-6,ceil(log10(tTemp(end))))';
-ACF_vec = zeros(length(tFit),size(data,2));
-if fitmeth == 'CON'
-    for i = 1:length(tFit)
-        ACF_vec(i,:) = sum(I_vec.*exp(-tFit(i)./s),1);
-    end
-elseif fitmeth == 'RAT'
-    fit_33 = @(x) (fit_vec(1,:).*x.^3 + fit_vec(2,:).*x.^2 + fit_vec(3,:).*x + fit_vec(4,:))./(x.^3 + fit_vec(5,:).*x.^2 + fit_vec(6,:).*x + fit_vec(7,:));
-    ACF_vec = fit_33(tFit)./(fit_vec(4,:)./fit_vec(7,:));
-    if any(ACF_vec(end,:) < 0)
-        ACF_vec = (ACF_vec - 2*min(ACF_vec))./(1 -  2*min(ACF_vec));
-    end
+switch fitmeth
+    case 'CON'
+        tFit = logspace(-6,-2)'; %Extrapolated
+        ACF_vec = zeros(length(tFit),size(data,2));
+        for i = 1:length(tFit)
+            ACF_vec(i,:) = sum(I_vec.*exp(-tFit(i)./s),1);
+        end
+        
+    case 'RAT'
+        tFit = logspace(-6,-2)'; %Extrapolated
+        ACF_vec = zeros(length(tFit),size(data,2));
+        fit_33 = @(x,i) (fit_vec(1,i).*x.^3 + fit_vec(2,i).*x.^2 + fit_vec(3,i).*x + fit_vec(4,i))./(x.^3 + fit_vec(5,i).*x.^2 + fit_vec(6,i).*x + fit_vec(7,i));
+        for i = 1:size(data,2)
+            ACF_vec(:,i) = fit_33(tFit,i)./(fit_vec(4,i)./fit_vec(7,i));
+            if ACF_vec(end,i) < 0
+                ACF_vec(:,i) = (ACF_vec(:,i) - 2*min(ACF_vec(:,i)))./(1 -  2*min(ACF_vec(:,i)));
+            end
+        end
+        
+    case 'SPL'
+        tFit = logspace(-6,log10(tTemp(end)))'; %Non-extrapolated
+        ACF_vec = zeros(length(tFit),size(data,2));
+        ACF_vec=fnval(tFit,data_spline)';
+        if size(ACF_vec,1)==1
+            ACF_vec=ACF_vec';
+        end
+        
+    otherwise
+        error('Error: Unrecognized fit method.');
 end
 ACF = mean(ACF_vec,2);
+semilogy(tTemp,dataTemp,'o',tFit(tFit<=tTemp(end)),ACF(tFit<=tTemp(end)))
 %% MSD calculation
 g1_an = @(x) (L/l_star + 4/3)/(5/3) * (sinh(x) + (2/3)*x*cosh(x)) / ...
     ((1 + (4/9)*x^2)*sinh((L/l_star)*x) + (4/3)*x*cosh((L/l_star)*x));
@@ -155,7 +182,7 @@ end
 
 tau = tFit;
 %MSD_vec = 0.33 * (xAcc + x0).^2/k0^2;
-MSD_vec = 0.25 * (xAcc + xAcc).^2/k0^2;
+MSD_vec = xAcc.^2/k0^2;
 MSD = mean(MSD_vec,2);
 %MSDFit_Spl = csape(tFit',MSD_vec');
 % %% Microrheology
