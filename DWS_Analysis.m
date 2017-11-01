@@ -2,7 +2,7 @@ function [tau,MSD,ACF,MSD_vec,ACF_vec]=DWS_Analysis(t,data,varargin)
 % DWS_Analysis Estimation of MSD and G* from DWS autocorrelation
 % data
 %
-% [MSD,G,MSD_vec,G_vec]=DWS_Analysis(t,data) calculates the MSD and complex
+% [tau,MSD,ACF,MSD_vec,ACF_vec]=DWS_Analysis(t,data) calculates the MSD and complex
 %   modulus G* from the autocorrelation function ICF obtained in a DWS
 %   experiment, using the inversion relation and Evans scheme for inverting
 %   the MSD into the complex modulus G. The measurement setup is assumed to 
@@ -10,18 +10,19 @@ function [tau,MSD,ACF,MSD_vec,ACF_vec]=DWS_Analysis(t,data,varargin)
 %  
 %  DATA can be a matrix containing several signals (one per column, all the same length).
 %  MSD_vec is the set of all the calculated MSDs.
-%  G_vec is the set of all the calculated Gs.
+%  ACF_vec is the set of all the calculated ACFs.
 
-% [MSD,G,MSD_vec,G_vec]=DWS_Analysis(t,data,'PropertyName',PropertyValue)
+% [tau,MSD,ACF,MSD_vec,ACF_vec]=DWS_Analysis(t,data,'PropertyName',PropertyValue)
 %  permits to set the value of PropertyName to PropertyValue.
 %  Admissible Properties are:
 %       T       -   Temperature (default = 298 K)
 %       eta     -   Solvent viscosity (default = 0.8872 cP)
 %       n       -   Solvent refractive index (default = 1.33)
+%       R       -   Bead radius (default = 115 nm)
 %       tail    -   Fit times for tail characterization (default =
-%       [0,0] i.e. no tail correction)
+%                   [0,0] i.e. no tail correction)
 %       fitmeth -   Fit method used (default = "CON")
-%       Allowed methods: CON (CONTIN), RAT (rational fit), SPL (spline)
+%                   Allowed methods: CON (CONTIN), RAT (rational fit), SPL (spline)
 
 
 % CREATED: Alessio Caciagli, University of Cambridge, October 2017
@@ -43,6 +44,12 @@ for i = 1:2:length(varargin)
         n = varargin{i+1};
     end
 end
+R = 115e-9;
+for i = 1:2:length(varargin)
+    if strcmpi(varargin{i},'R')
+        R = varargin{i+1};
+    end
+end
 tail = [0,0];
 for i = 1:2:length(varargin)
     if strcmpi(varargin{i},'tail')
@@ -61,7 +68,6 @@ lambda = 685*10^(-9); %Laser wavelength
 L = 2e-3; %Cuvette thickness
 l_star = 401.87e-6; %Transport mean free path
 k0 = 2*pi*n/lambda;
-R = 115e-9; %Bead radius
 
 %% g1(tau) calc. and fit to g1(tau) (for smoothness)
 
@@ -95,13 +101,30 @@ for j = 1:size(data,2)
     
     switch fitmeth
         case 'CON'
-            %CONTIN loop run          
-            coarse_s = logspace(-6,-1,10)';
-            coarse_g = ones(size(coarse_s));
-            [coarse_g,~,~] = CONTIN_Rilt(tTemp,dataTemp,coarse_s,coarse_g,alpha,'logarithmic',100,[],[],[],[],[]);
+            %CONTIN loop run
+            g_inf = -6;
+            g_sup = -1;
+            check = 1;
+            while(check>0)
+                check=0;
+                coarse_s = logspace(g_inf,g_sup,10)';
+                coarse_g = ones(size(coarse_s));
+                [coarse_g,~,~] = CONTIN_Rilt(tTemp,dataTemp,coarse_s,coarse_g,alpha,'logarithmic',100,[],[],[],[],[]);
+                % s refinement
+                g_peak = find(coarse_g>0.01);
+                if g_peak(1)<4
+                    g_inf = g_inf-1;
+                    check=1;
+                end
+                if g_peak(end)>7
+                    g_sup = g_sup+1;
+                    g_inf = g_inf+1;
+                    check=1;
+                end
+            end
             for i = 2:10
-                disp(['Iteration: ',num2str(i)])
-                s = logspace(-6,-1,i*10)';
+                disp(['Iteration: ',num2str(i),'/10'])
+                s = logspace(g_inf,g_sup,i*10)';
                 g0 = interp1(coarse_s,coarse_g,s,'linear');
                 [g,~,~] = CONTIN_Rilt(tTemp,dataTemp,s,g0,alpha,'logarithmic',100,[],[],[],[],[]);
                 coarse_g = g;
@@ -133,18 +156,17 @@ for j = 1:size(data,2)
             error('Error: Unrecognized fit method.');
     end
 end
-close all
 %%
 switch fitmeth
     case 'CON'
-        tFit = logspace(-6,-2)'; %Extrapolated
+        tFit = logspace(floor(log10(tTemp(1))),1+log10(tTemp(end)))'; %Extrapolated
         ACF_vec = zeros(length(tFit),size(data,2));
         for i = 1:length(tFit)
             ACF_vec(i,:) = sum(I_vec.*exp(-tFit(i)./s),1);
         end
         
     case 'RAT'
-        tFit = logspace(-6,-2)'; %Extrapolated
+        tFit = logspace(floor(log10(tTemp(1))),1+log10(tTemp(end)))'; %Extrapolated
         ACF_vec = zeros(length(tFit),size(data,2));
         fit_33 = @(x,i) (fit_vec(1,i).*x.^3 + fit_vec(2,i).*x.^2 + fit_vec(3,i).*x + fit_vec(4,i))./(x.^3 + fit_vec(5,i).*x.^2 + fit_vec(6,i).*x + fit_vec(7,i));
         for i = 1:size(data,2)
@@ -155,21 +177,29 @@ switch fitmeth
         end
         
     case 'SPL'
-        tFit = logspace(-6,log10(tTemp(end)))'; %Non-extrapolated
-        ACF_vec = zeros(length(tFit),size(data,2));
+        tFit = logspace(log10(tTemp(1)),log10(tTemp(end)))'; %Non-extrapolated
         ACF_vec=fnval(tFit,data_spline)';
         if size(ACF_vec,1)==1
             ACF_vec=ACF_vec';
         end
+        ACF_vec = ACF_vec./fnval(0.999*tFit(1),data_spline);
         
     otherwise
         error('Error: Unrecognized fit method.');
 end
 ACF = mean(ACF_vec,2);
+
+close all
+subplot(1,2,1)
 semilogy(tTemp,dataTemp,'o',tFit(tFit<=tTemp(end)),ACF(tFit<=tTemp(end)))
+xlabel('Time [s]')
+ylabel('g1(t)')
+title('g1 (raw and smooth fit)')
+legend('Raw','Fit')
+
 %% MSD calculation
-g1_an = @(x) (L/l_star + 4/3)/(5/3) * (sinh(x) + (2/3)*x*cosh(x)) / ...
-    ((1 + (4/9)*x^2)*sinh((L/l_star)*x) + (4/3)*x*cosh((L/l_star)*x));
+g1_an = @(x) (L/l_star + 4/3)/(5/3) .* (sinh(x) + (2/3).*x.*cosh(x)) ./ ...
+    ((1 + (4/9).*x.^2).*sinh((L/l_star).*x) + (4/3).*x.*cosh((L/l_star).*x));
 x0 = sqrt(-3*log(ACF_vec))./(L/l_star);
 xAcc = zeros(size(x0));
 
@@ -184,6 +214,13 @@ tau = tFit;
 %MSD_vec = 0.33 * (xAcc + x0).^2/k0^2;
 MSD_vec = xAcc.^2/k0^2;
 MSD = mean(MSD_vec,2);
+subplot(1,2,2)
+loglog(tau,MSD,'o',tau,6*(kB*T/(6*pi*eta*R))*tau,'k--')
+xlabel('Time [s]')
+ylabel('MSD(t)')
+legend('Data','Pure diffusive')
+title('MSD')
+
 %MSDFit_Spl = csape(tFit',MSD_vec');
 % %% Microrheology
 % t_Micro = (1e-6:1e-6:1)';

@@ -184,7 +184,7 @@ g0 = g0*sum(y)/sum(A*g0);
 % Plots initialization
 fh = gcf; clf(fh);
 set(fh,'doublebuffer','on');
-s1h = subplot(2,2,1); plot(t,y,'.',t,A*g0); title('Data and fitting curve'); axis tight
+s1h = subplot(2,2,1); semilogy(t,y,'.',t,A*g0); title('Data and fitting curve'); axis tight
 s2h = subplot(2,2,2); feval(plot_type,s,g0,'o-'); title('Initial distribution...'); axis tight
 s3h = subplot(2,2,3); msdh = plot(0,0); title('Normalized msd');
 s4h = subplot(2,2,4); plot(t,abs(y-A*g0)); title('Residuals'); axis tight
@@ -270,7 +270,7 @@ function plotdata(s1h,s2h,s3h,s4h,t,y,A,g,k,maxsearch,plot_type,s,msd2plot,msdh,
 % For the "real-time" plots
 
 axes(s1h);
-plot(t,y,'.',t,A*g); title('Data')
+semilogy(t,y,'.',t,A*g); title('Data')
 xlabel('Time (s)');
 axis tight
 

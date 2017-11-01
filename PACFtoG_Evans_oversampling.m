@@ -23,6 +23,8 @@ function [omega,G,G_err,G_vec]=PACFtoG_Evans_oversampling(t,data,fps,varargin)
 %       CG          -   Coarse-graining factor (default = 1.45)
 %       Beta        -   Oversampling factor (default = 100)
 %       Gfactor     -   Multiplication factor for G* (default = 1)
+%       Gsampling   -   Sampling style for G points (default = "log")
+%           Allowed styles: logarithmic (log), linear (lin)   
 
 % CREATED: Alessio Caciagli, University of Cambridge, April 2017
 
@@ -60,6 +62,12 @@ Gfactor = 1;
 for n = 1:2:length(varargin)
     if strcmpi(varargin{n},'Gfactor')
         Gfactor = varargin{n+1};
+    end
+end
+Gsampling = 'log';
+for n = 1:2:length(varargin)
+    if strcmpi(varargin{n},'Gsampling')
+        Gsampling = varargin{n+1};
     end
 end
 
@@ -121,7 +129,16 @@ disp('Calculating...')
 resfreq=1/t(end);
 minfreq=1/(resfreq*t_downsample(end));
 maxfreq=fps/(2*resfreq);
-omega=2*pi*resfreq*logspace(log10(minfreq),log10(maxfreq),100)';
+switch Gsampling
+    case 'log'
+        omega=2*pi*resfreq*logspace(log10(minfreq),log10(maxfreq),100)';
+        
+    case 'lin'
+        omega=2*pi*resfreq*linspace(minfreq,maxfreq,100)';
+        
+    otherwise
+            error('Error: Unrecognized G sampling style.');
+end
 t_oversample=(1/(beta*fps):1/(beta*fps):t_downsample(end))';
 data_oversample=fnval(t_oversample,data_spline)';
 
@@ -153,6 +170,9 @@ Gp = -fft_imag./(repmat(omega,1,size(data,2)).*fft_tot); %Uncorrected for trap!
 Gpp = -fft_real./(repmat(omega,1,size(data,2)).*fft_tot);
 
 %Finalize
+Gp=Gp(omega<omega(end)/10);
+Gpp=Gpp(omega<omega(end)/10);
+omega=omega(omega<omega(end)/10); %Exclude the upper 10% due to artifacts
 G = Gfactor*complex(mean(Gp,2),mean(Gpp,2));
 G_err = Gfactor*complex(std(Gp,0,2),std(Gpp,0,2));
 G_vec = Gfactor*complex(Gp,Gpp);

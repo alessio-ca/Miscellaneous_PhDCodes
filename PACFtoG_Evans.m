@@ -17,6 +17,8 @@ function [omega,G,G_err,G_vec]=PACFtoG_Evans(t,data,fps,varargin)
 %       TauMax      -   Maximum time delay to be considered (default = +Inf)
 %       f0          -   Value of f(t) at t=0 (default = 1)
 %       fpinf       -   Value of f(t) at t->Inf (default = 0)
+%       Gfactor     -   Conversion factor (default = 1)
+
 
 % CREATED: Alessio Caciagli, University of Cambridge, January 2017
 

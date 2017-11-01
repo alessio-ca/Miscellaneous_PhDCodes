@@ -23,6 +23,8 @@ function [omega,G,G_err,G_vec]=MSDtoG_Evans_oversampling(t,data,fps,varargin)
 %       CG          -   Coarse-graining factor (default = 1.45)
 %       Beta        -   Oversampling factor (default = 100)
 %       Jfactor     -   Conversion factor from MSD to J (default = 1)
+%       Gsampling   -   Sampling style for G points (default = "log")
+%           Allowed styles: logarithmic (log), linear (lin)             
 %       BM          -   Black Magic, secret weapon of Alessio to make
 %                       pretty plots if they oscillate (default = 0 because
 %                       we do not cheat... usually).
@@ -63,6 +65,12 @@ Jfactor = 1;
 for n = 1:2:length(varargin)
     if strcmpi(varargin{n},'Jfactor')
         Jfactor = varargin{n+1};
+    end
+end
+Gsampling = 'log';
+for n = 1:2:length(varargin)
+    if strcmpi(varargin{n},'Gsampling')
+        Gsampling = varargin{n+1};
     end
 end
 BM = 0;
@@ -116,8 +124,8 @@ data_fit_inf = data(end-Nfinf:end,:);
 A_inf_lin = [ones(length(t_fit_inf),1),log(t_fit_inf)];
 bf_inf_lin = A_inf_lin\log(data_fit_inf);
 %Then improve by nonlin fitting
-A_inf = @(x,xdata) x(1).*xdata.^x(2);
-x0 = [exp(bf_inf_lin(1)),bf_inf_lin(2)];
+A_inf = @(x,xdata) x(1) + x(2).*xdata.^x(3);
+x0 = [0,exp(bf_inf_lin(1)),bf_inf_lin(2)];
 [bf_inf,resnorm,~,exitflag,output] = lsqcurvefit(A_inf,x0,t_fit_inf,data_fit_inf)
 
 
@@ -159,14 +167,14 @@ else
 end
 disp(' ')
 disp(['J0 = ',num2str(bf_0(1))])
-disp(['fpinf = ',num2str(bf_inf(1))])
-if bf_0(1)<0 || abs(bf_inf(2)-1)>0.1
+disp(['fpinf = ',num2str(bf_inf(3))])
+if bf_0(1)<0 || abs(bf_inf(3)-1)>0.1
     disp('Warning: fit coefficients are ill defined.')
     if bf_0(1) < 0
         disp('Forcing J0 = 0.')
         bf_0 = [0,exp(bf_0_lin(1)),bf_0_lin(2)];
     end
-    if abs(bf_inf(2)-1)>0.1
+    if abs(bf_inf(3)-1)>0.1
         disp('System does not display a long time eta along the measured times. Proceeding anyway...')
     end
 end
@@ -222,8 +230,18 @@ disp('Calculating...')
 %Define omega vector 
 resfreq=1/t(end);
 minfreq=1/(resfreq*t_downsample(end));
-maxfreq=fps/(2*resfreq);
-omega=2*pi*resfreq*logspace(log10(minfreq),log10(maxfreq),100)';
+maxfreq=fps/(2*resfreq); 
+switch Gsampling
+    case 'log'
+        omega=2*pi*resfreq*logspace(log10(minfreq),log10(maxfreq),100)';
+        
+    case 'lin'
+        omega=2*pi*resfreq*linspace(minfreq,maxfreq,100)';
+        
+    otherwise
+            error('Error: Unrecognized G sampling style.');
+end
+    
 t_oversample=(1/(beta*fps):1/(beta*fps):t_downsample(end))';
 data_oversample=fnval(t_oversample,data_spline)';
 
@@ -236,16 +254,19 @@ end
 %al., (2010))
 
 f0 = bf_0(1);
-fpinf = bf_inf(1);
+fpinf = bf_inf(2);
 
 
 %Calculate the single terms
 evans_fft = repmat(1i*omega,1,size(data_oversample,2))*f0;
 
 A_Evans = diff(data_oversample)./diff(t_oversample);
-A_Evans = [0;(data(1) - f0)/t_oversample(1);A_Evans;fpinf];
+%A_Evans = [0;(data(1) - f0)/t_oversample(1);A_Evans;fpinf];
+A_Evans = [0;A_Evans;fpinf];
 diffA_Evans = diff(A_Evans);
-t_oversample = [0;t_oversample];
+diffA_Evans(abs(diffA_Evans)<2e-6)=0;
+%t_oversample = [0;t_oversample];
+diagnostic = zeros(length(t_oversample),10);
 
 %Calculate the summatory
 for i=1:length(omega)
@@ -253,10 +274,15 @@ for i=1:length(omega)
     if BM == 1
         evans_fft(i,:) = evans_fft(i,:) - diffA_Evans(end).*exp(-1i*omega(i)*t_oversample(end));
     end
+    if i<=10
+        diagnostic(:,i)=diffA_Evans.*exp(-1i*omega(i)*t_oversample);
+    end
 end
 
 %Invert the result and multiply
 G = repmat(1i*omega,1,size(data_oversample,2))./evans_fft;
+G=G(omega<omega(end)/10);
+omega=omega(omega<omega(end)/10); %Exclude the upper 10% due to artifacts
 Gp = real(G);
 Gpp = imag(G);
 G_err = complex(std(Gp,0,2),std(Gpp,0,2));
