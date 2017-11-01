@@ -1,4 +1,4 @@
-function [omega,G,G_err,G_vec]=MSDtoG_Evans_oversampling(t,data,fps,varargin)
+function [omega,G,G_err,G_vec,DeltaA]=MSDtoG_Evans_oversampling(t,data,fps,varargin)
 % MSDtoG_Evans PACF to G' and G'' conversion according to Evans (2010)
 %
 % [omega,G,G_err,G_vec]=MSDtoG_Evans(t,data,fps) calculates the
@@ -24,7 +24,8 @@ function [omega,G,G_err,G_vec]=MSDtoG_Evans_oversampling(t,data,fps,varargin)
 %       Beta        -   Oversampling factor (default = 100)
 %       Jfactor     -   Conversion factor from MSD to J (default = 1)
 %       Gsampling   -   Sampling style for G points (default = "log")
-%           Allowed styles: logarithmic (log), linear (lin)             
+%           Allowed styles: logarithmic (log), linear (lin)
+%       Eps         -   Filter epsilon for residuals (default = 0)
 %       BM          -   Black Magic, secret weapon of Alessio to make
 %                       pretty plots if they oscillate (default = 0 because
 %                       we do not cheat... usually).
@@ -57,7 +58,7 @@ for n = 1:2:length(varargin)
 end
 beta = 100;
 for n = 1:2:length(varargin)
-    if strcmpi(varargin{n},'beta')
+    if strcmpi(varargin{n},'Beta')
         beta = varargin{n+1};
     end
 end
@@ -71,6 +72,12 @@ Gsampling = 'log';
 for n = 1:2:length(varargin)
     if strcmpi(varargin{n},'Gsampling')
         Gsampling = varargin{n+1};
+    end
+end
+Eps = 0;
+for n = 1:2:length(varargin)
+    if strcmpi(varargin{n},'Eps')
+        Eps = varargin{n+1};
     end
 end
 BM = 0;
@@ -254,29 +261,32 @@ end
 %al., (2010))
 
 f0 = bf_0(1);
-fpinf = bf_inf(2);
+%fpinf = bf_inf(2);
+fpinf = bf_inf(2)*bf_inf(3)*t_oversample(end).^(bf_inf(3)-1);
 
 
 %Calculate the single terms
 evans_fft = repmat(1i*omega,1,size(data_oversample,2))*f0;
 
 A_Evans = diff(data_oversample)./diff(t_oversample);
-%A_Evans = [0;(data(1) - f0)/t_oversample(1);A_Evans;fpinf];
-A_Evans = [0;A_Evans;fpinf];
+if BM == 0
+    A_Evans = [0;(data_oversample(1) - f0)/t_oversample(1);A_Evans;fpinf];
+    t_oversample = [0;t_oversample];
+else
+    A_Evans = [0;A_Evans];
+    t_oversample=t_oversample(1:end-1);
+end
 diffA_Evans = diff(A_Evans);
-diffA_Evans(abs(diffA_Evans)<2e-6)=0;
-%t_oversample = [0;t_oversample];
-diagnostic = zeros(length(t_oversample),10);
+diffA_Evans(abs(diffA_Evans)<Eps)=0;
+
+%Output residuals
+datainterval=unique(floor(logspace(0,log10(length(t_oversample)),1000)));
+DeltaA=abs(diffA_Evans(datainterval,1));
+
 
 %Calculate the summatory
 for i=1:length(omega)
     evans_fft(i,:)=evans_fft(i,:)+sum(diffA_Evans.*exp(-1i*omega(i)*t_oversample));
-    if BM == 1
-        evans_fft(i,:) = evans_fft(i,:) - diffA_Evans(end).*exp(-1i*omega(i)*t_oversample(end));
-    end
-    if i<=10
-        diagnostic(:,i)=diffA_Evans.*exp(-1i*omega(i)*t_oversample);
-    end
 end
 
 %Invert the result and multiply
