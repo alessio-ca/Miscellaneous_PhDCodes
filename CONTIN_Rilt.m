@@ -109,7 +109,7 @@ function [g,yfit,cfg] = CONTIN_Rilt(t,y,s,g0,alpha,varargin)
 % semilogx(s0,g0/max(g0),s,g/max(g),'o-'); title('g-target and g');
 
 % CREATED: Alessio Caciagli, University of Cambridge, October 2017
-% ADAPTED: rilt routine from Iari-Gabriel Marino (see File Exchange)
+% ADAPTED FROM: rilt routine from Iari-Gabriel Marino (see File Exchange)
 
 g0 = g0(:); % must be column
 s = s(:); % must be column

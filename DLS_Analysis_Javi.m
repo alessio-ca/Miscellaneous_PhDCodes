@@ -89,7 +89,7 @@ for j = 1:size(data,2)
     
     %g1(tau) calculation with  optional tail treatment (least-Squares)
     if all(tail)
-        dataTempLog = log(ACF_ToFit(1:CritPts));
+        dataTempLog = log(ACF_ToFit(1:CritPts(1)));
         A = [ones(length(tTemp),1),tTemp,tTemp.^2];
         Coeff = A\dataTempLog;
         beta = exp(Coeff(1));
@@ -101,8 +101,8 @@ for j = 1:size(data,2)
     switch fitmeth
         case 'CON'
             %CONTIN loop run
-            g_inf = -6;
-            g_sup = -1;
+            g_inf = -7;
+            g_sup = 1;
             check = 1;
             while(check>0)
                 check=0;
@@ -117,7 +117,7 @@ for j = 1:size(data,2)
                 end
                 if g_peak(end)>7
                     g_sup = g_sup+1;
-                    g_inf = g_inf+1;
+                    %g_inf = g_inf+1;
                     check=1;
                 end
             end
@@ -130,9 +130,7 @@ for j = 1:size(data,2)
                 coarse_s = s;
                 disp(' ')
             end
-            I_vec(:,j) = yfit./repmat(yfit(1),[length(I_vec),1]);
-            %I_vec(:,j) = g;
-            %I_vec = I_vec./repmat(sum(I_vec,1),[length(I_vec),1]);
+            I_vec(:,j) = g;
             
         case 'RAT'
             %Rational fit loop run
@@ -159,15 +157,25 @@ end
 %%
 switch fitmeth
     case 'CON'
-        tFit = logspace(floor(log10(tTemp(1))),1+log10(tTemp(end)))'; %Extrapolated
-        ACF_spline=csape(tTemp',yfit');
-        ACF_vec=fnval(tFit,ACF_spline)';
-        if size(ACF_vec,1)==1
-            ACF_vec=ACF_vec';
+        deltaTail = log10(tTemp(end)/tTemp(end-1));
+        nTail = floor(1/deltaTail);
+        tFit = [tTemp;10.^(log10(tTemp(end)) + deltaTail*(1:nTail)')];
+        [sM,tM] = meshgrid(s,tFit);
+        A = exp(-tM./sM);
+        for i = 1:size(data,2)
+            ACF_vec(:,i) = A*I_vec(:,i);
+            %Correct 0-intercept by fitting the first 3 points
+            if ACF_vec(1,i) > 1
+                tCrit = tFit(1:3,:);
+                dataTempLog = log(ACF_vec(1:3,i));
+                B = [ones(length(tCrit),1),tCrit,tCrit.^2];
+                Coeff = B\dataTempLog;
+                beta = exp(Coeff(1));
+            else
+                beta = 1;
+            end
+            ACF_vec(:,i) = ACF_vec(:,i)/beta;
         end
-        %for i = 1:length(tFit)
-        %    ACF_vec(i,:) = sum(I_vec.*exp(-tFit(i)./s),1);
-        %end
         
     case 'RAT'
         tFit = logspace(floor(log10(tTemp(1))),1+log10(tTemp(end)))'; %Extrapolated
