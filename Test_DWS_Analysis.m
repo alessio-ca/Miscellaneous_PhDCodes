@@ -7,7 +7,7 @@ lambda = 685*10^(-9); %Laser wavelength
 L = 2e-3; %Cuvette thickness
 l_star = 401.87e-6; %Mean free path
 k0 = 2*pi*n/lambda;
-R = 0.1e-6; %Bead radius
+R = 0.115e-6; %Bead radius
 rho_p = 1.04; %Bead density (in g/cm^3)
 rho_f = 1.00; %Fluid intensity (in g/cm^3)
 m_p = 1e3*rho_p*(4/3)*pi*R^3; %Bead mass (in Kg)
@@ -68,17 +68,20 @@ filename_ICF = 'F:\AC_2017_10_16\cooling_48C_ICF.dat';
 filename_MR = 'F:\AC_2017_10_16\cooling_48C_MR.dat';
 ICF = DWSread(filename_ICF,'raw');
 MR = DWSread(filename_MR,'MR');
+
 %%
 % Preliminary plot (individuate the tail, if present)
 semilogx(ICF(:,1),ICF(:,2))
 xlabel('Time (s)')
 ylabel('g_2-1 (t)')
+
 %% 
 % Analysis section (here the tail is taken from 0.1 to 1)
 tail=[1e-1,1];
 [tau_CON,MSD_CON,ACF_CON]=DWS_Analysis(ICF(:,1),ICF(:,2),'T',T,'tail',tail,'fit','CON');
 [tau_RAT,MSD_RAT,ACF_RAT]=DWS_Analysis(ICF(:,1),ICF(:,2),'T',T,'tail',tail,'fit','RAT');
 [tau_SPL,MSD_SPL,ACF_SPL]=DWS_Analysis(ICF(:,1),ICF(:,2),'T',T,'tail',tail,'fit','SPL');
+
 %%
 % Intermediate plot: g1 and MSD
 close all
@@ -93,23 +96,63 @@ loglog(MR(:,1),MR(:,2),tau_CON,MSD_CON*1e+12,'o',tau_RAT,MSD_RAT*1e+12,'x',tau_S
 legend('Raw','CON','RAT','SPL','Pure diffusive','Location','northwest')
 xlabel('Time (s)')
 ylabel('MSD (\mum^2)')
-%%
-% MSD to G conversion
 
-%MSD_Spl_CON = csape(tau_CON',MSD_CON');
-%MSD_Spl_RAT = csape(tau_RAT',MSD_CON');
 %%
 %For the spline, discard the first two order of magnitude (due to noise)
-MSD_SPL=MSD_SPL(tau_SPL>100*tau_SPL(1));
-tau_SPL=tau_SPL(tau_SPL>100*tau_SPL(1));
-%MSD_Spl_SPL = csape(tau_SPL',MSD_SPL');
-%%
-Jfactor = 1 / (kB*T/(pi*R));
-[omega,G]=MSDtoG_Evans_oversampling(tau_CON,MSD_CON,1/tau_CON(1),'CG',1.001,'Beta',10,'Nf0',10,'Nfinf',4,'Jfactor',Jfactor,'BM',1);
-% %% Microrheology
-% t_Micro = (1e-6:1e-6:1)';
-% MSD_Micro = fnval(t_Micro,MSDFit_Spl)';
-% if size(MSD_Micro,1)==1
-%     MSD_Micro=MSD_Micro';
-% end
+MSD_SPL_Acc=MSD_SPL(tau_SPL>100*tau_SPL(1));
+tau_SPL_Acc=tau_SPL(tau_SPL>100*tau_SPL(1));
 
+%%
+% First MSD-to-G conversion: identify artifacts etc.
+Jfactor = 1 / (kB*T/(pi*R));
+[omega_in,G_in,~,~,DeltaA]=MSDtoG_Evans_oversampling(tau_CON,MSD_CON,1/tau_CON(1),'CG',1.001,'Beta',1,'Nf0',10,'Nfinf',4,'Jfactor',Jfactor);
+
+%%
+close all
+subplot(1,2,1)
+loglog(MR(:,5),MR(:,6),'b',MR(:,5),MR(:,7),'r',omega_in,real(G_in),'*-',omega_in,imag(G_in),'x-')
+legend('G'',Raw','G'''',Raw','G'', Prelim','G'''', Prelim','location','northwest')
+xlabel('\omega (rad/s)') 
+ylabel('Complex Modulus (Pa)')
+subplot(1,2,2)
+loglog(DeltaA)
+xlabel('Pts')
+ylabel('\DeltaA')
+
+%%
+%From Delta_A plot, we see that residuals (Delta_A) go to zero after ~10^4
+%points but display an artificial plateau at Delta_A~5e-5. A filter Eps is
+%therefore needed. Plus, the last residual display a sudden jump. "Black
+%magic" will be required.
+Eps = 5e-5;
+[omega_fin,G_fin]=MSDtoG_Evans_oversampling(tau_CON,MSD_CON,1/tau_CON(1),'CG',1.001,'Beta',10,'Nf0',10,'Nfinf',4,'Jfactor',Jfactor,'Eps',Eps,'BM',3);
+
+%%
+close all
+loglog(MR(:,5),MR(:,6),'b',MR(:,5),MR(:,7),'r',omega_in,real(G_in),'k-',omega_in,imag(G_in),'k--',omega_fin,real(G_fin),'*-',omega_fin,imag(G_fin),'x-')
+legend('G'', LS','G'''', LS','G'', Prelim','G'''', Prelim','G'', Fin','G'''', Fin','location','northwest')
+xlabel('\omega (rad/s)')
+ylabel('Complex Modulus (Pa)')
+
+%%
+%For comparison, the G* is calculated for all the series
+[omega_RAT,G_RAT]=MSDtoG_Evans_oversampling(tau_RAT,MSD_RAT,1/tau_RAT(1),'CG',1.001,'Beta',10,'Nf0',10,'Nfinf',4,'Jfactor',Jfactor,'BM',1);
+[omega_SPL,G_SPL]=MSDtoG_Evans_oversampling(tau_SPL_Acc,MSD_SPL_Acc,1/tau_SPL_Acc(1),'CG',1.001,'Beta',10000,'Nf0',10,'Nfinf',4,'Jfactor',Jfactor,'Eps',2e-6,'BM',1);
+%%
+loglog(MR(:,5),MR(:,6),'b',MR(:,5),MR(:,7),'r')
+hold on
+loglog(omega_fin,real(G_fin),'o-',omega_fin,imag(G_fin),'x-')
+loglog(omega_RAT,real(G_RAT),'o-',omega_RAT,imag(G_RAT),'x-')
+loglog(omega_SPL,real(G_SPL),'o-',omega_SPL,imag(G_SPL),'x-')
+hold off
+legend('G'', LS','G'''', LS','G'', CON','G'''', CON','G'', RAT','G'''', RAT','G'', SPL','G'''', SPL','location','northwest')
+xlabel('\omega (rad/s)')
+ylabel('Complex Modulus (Pa)')
+
+%Conclusions: the CON and SPL pretty much agree, with the CON covering a
+%larger bandwidth. The RAT for this case is totally off, so not trustworthy
+%(we could have reached this conclusion by judging the ACF and MSD plots
+%earlier). The SPL is (often) correct, but in this case the CON is 
+%equivalent and spans a larger frequenct range. The CON result is therefore 
+%chosen as the FINAL one. The G' result is accurate up to w=10^6 rad/s 
+%(before the little dip). The G''result is accurate up to the whole range.

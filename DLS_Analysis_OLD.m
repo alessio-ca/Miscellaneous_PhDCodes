@@ -1,26 +1,24 @@
 function [tau,MSD,ACF,MSD_vec,ACF_vec]=DLS_Analysis(t,data,varargin)
-% DLS_Analysis Estimation of MSD and G* from DLS autocorrelation
+% DLS_Analysis Estimation of MSD and G* from DWS autocorrelation
 % data
 %
-% [tau,MSD,ACF,MSD_vec,ACF_vec]=DLS_Analysis(t,data) calculates the MSD and complex
-%   modulus G* from the autocorrelation function ICF obtained in a DLS
+% [tau,MSD,ACF,MSD_vec,ACF_vec]=DWS_Analysis(t,data) calculates the MSD and complex
+%   modulus G* from the autocorrelation function ICF obtained in a DWS
 %   experiment, using the inversion relation and Evans scheme for inverting
 %   the MSD into the complex modulus G. The measurement setup is assumed to 
-%   be a ZetaSizer APS Nano (Malvern).
+%   be a DWS Rheolab (LS instruments)
 %  
 %  DATA can be a matrix containing several signals (one per column, all the same length).
 %  MSD_vec is the set of all the calculated MSDs.
 %  ACF_vec is the set of all the calculated ACFs.
 
-% [tau,MSD,ACF,MSD_vec,ACF_vec]=DLS_Analysis(t,data,'PropertyName',PropertyValue)
+% [tau,MSD,ACF,MSD_vec,ACF_vec]=DWS_Analysis(t,data,'PropertyName',PropertyValue)
 %  permits to set the value of PropertyName to PropertyValue.
 %  Admissible Properties are:
 %       T       -   Temperature (default = 298 K)
 %       eta     -   Solvent viscosity (default = 0.8872 cP)
 %       n       -   Solvent refractive index (default = 1.33)
 %       R       -   Bead radius (default = 115 nm)
-%       beta    -   Calculation of coherence factor (default = 1)
-%       cut     -   ACF cut value for fit (0<cut<1) (default = 0.1)
 %       tail    -   Fit times for tail characterization (default =
 %                   [0,0] i.e. no tail correction)
 %       fitmeth -   Fit method used (default = "CON")
@@ -52,18 +50,6 @@ for i = 1:2:length(varargin)
         R = varargin{i+1};
     end
 end
-beta = 1;
-for i = 1:2:length(varargin)
-    if strcmpi(varargin{i},'beta')
-        beta = varargin{i+1};
-    end
-end
-cut = 0.1;
-for i = 1:2:length(varargin)
-    if strcmpi(varargin{i},'cut')
-        cut = varargin{i+1};
-    end
-end
 tail = [0,0];
 for i = 1:2:length(varargin)
     if strcmpi(varargin{i},'tail')
@@ -90,70 +76,33 @@ fit_vec = zeros(7,size(data,2));
 
 for j = 1:size(data,2)
     
-    %Delete first 6 points (usually noise) & format data
-    Time_ToFit = t(7:end);
-    ACF_ToFit = data(7:end,j);
+    %Delete first 2 points (usually noise) & format data
+    Time_ToFit = t(3:end);
+    ACF_ToFit = data(3:end,j);
     if all(tail)
         tailFit = ACF_ToFit(Time_ToFit > tail(1) & Time_ToFit < tail(2));
         tailFit = mean(tailFit);
         ACF_ToFit = ACF_ToFit - tailFit;
     end
-    CritPts = find(ACF_ToFit< cut*ACF_ToFit(1));
+    CritPts = find(ACF_ToFit< 0.3*ACF_ToFit(1));
     tTemp = Time_ToFit(1:CritPts(1));
     
     %g1(tau) calculation with  optional tail treatment (least-Squares)
-    switch beta
-        case 1
-            dataTempLog = log(ACF_ToFit(1:10));
-            A = [ones(length(tTemp(1:10)),1),tTemp(1:10),tTemp(1:10).^2];
-            Coeff = A\dataTempLog;
-            beta = exp(Coeff(1));
-         
-        case 0
-            beta = 1;
-            
-        otherwise
-            error('Error: Unrecognized value for beta.');
-            
+    if all(tail)
+        dataTempLog = log(ACF_ToFit(1:CritPts));
+        A = [ones(length(tTemp),1),tTemp,tTemp.^2];
+        Coeff = A\dataTempLog;
+        beta = exp(Coeff(1));
+    else
+        beta = 1;
     end
-    dataTemp = sqrt(ACF_ToFit(1:CritPts(1)))/sqrt(beta);
-    
-    %Plotting section
-    f=figure(1);
-    semilogx(t,data(:,1),'o')
-    hold on
-    semilogx(tTemp,dataTemp,'s')
-    semilogx(t,cut*ones(length(t),1),'--k');
-    semilogx(t,ones(length(t),1),'-k');
-    legend('g2 (Raw)','g1 (Raw)','Location','northeast')
-    xlabel('Time (us)')
-    ylabel('ACF')
-    hold off
-    drawnow
-    
-    disp(' ')
-    disp('Check your g2: the initial point MUST be < 1! If you are satisfied...')
-    disp('Press the RETURN key to GO ON (make sure the Figure is active!).')
-    disp('Press any other key to STOP.')
-    
-    
-    %pause; % wait for a keypress
-    %k = waitforbuttonpress;
-    %currkey=get(gcf,'CurrentKey');
-    %if strcmp(currkey, 'return')
-    %    currkey=1;
-    %else
-    %    return;
-    %end
+    dataTemp = sqrt(ACF_ToFit(1:CritPts))/sqrt(beta);
     
     switch fitmeth
         case 'CON'
             %CONTIN loop run
-            %default: 
-            %   g_inf  = -7
-            %   g_sup  = +1
-            g_inf = -7;
-            g_sup = 1;
+            g_inf = -6;
+            g_sup = -1;
             check = 1;
             while(check>0)
                 check=0;
@@ -162,16 +111,13 @@ for j = 1:size(data,2)
                 [coarse_g,~,~] = CONTIN_Rilt(tTemp,dataTemp,coarse_s,coarse_g,alpha,'logarithmic',100,[],[],[],[],[]);
                 % s refinement
                 g_peak = find(coarse_g>0.01);
-                %default:
-                %   block_inf = 3
-                %   block_sup = 8
-                if g_peak(1)<3
+                if g_peak(1)<4
                     g_inf = g_inf-1;
                     check=1;
                 end
-                if g_peak(end)>8
+                if g_peak(end)>7
                     g_sup = g_sup+1;
-                    %g_inf = g_inf+1;
+                    g_inf = g_inf+1;
                     check=1;
                 end
             end
@@ -185,6 +131,7 @@ for j = 1:size(data,2)
                 disp(' ')
             end
             I_vec(:,j) = g;
+            I_vec = I_vec./repmat(sum(I_vec,1),[length(I_vec),1]);
             
         case 'RAT'
             %Rational fit loop run
@@ -211,25 +158,10 @@ end
 %%
 switch fitmeth
     case 'CON'
-        deltaTail = log10(tTemp(end)/tTemp(end-1));
-        nTail = floor(1/deltaTail);
-        tFit = [tTemp;10.^(log10(tTemp(end)) + deltaTail*(1:nTail)')];
-        [sM,tM] = meshgrid(s,tFit);
-        A = exp(-tM./sM);
+        tFit = logspace(floor(log10(tTemp(1))),1+log10(tTemp(end)))'; %Extrapolated
         ACF_vec = zeros(length(tFit),size(data,2));
-        for i = 1:size(data,2)
-            ACF_vec(:,i) = A*I_vec(:,i);
-            %Correct 0-intercept by fitting the first 3 points
-            if ACF_vec(1,i) > 1
-                tCrit = tFit(1:3,:);
-                dataTempLog = log(ACF_vec(1:3,i));
-                B = [ones(length(tCrit),1),tCrit,tCrit.^2];
-                Coeff = B\dataTempLog;
-                beta = exp(Coeff(1));
-            else
-                beta = 1;
-            end
-            ACF_vec(:,i) = ACF_vec(:,i)/beta;
+        for i = 1:length(tFit)
+            ACF_vec(i,:) = sum(I_vec.*exp(-tFit(i)./s),1);
         end
         
     case 'RAT'
@@ -259,7 +191,7 @@ ACF = mean(ACF_vec,2);
 close all
 subplot(1,2,1)
 semilogy(tTemp,dataTemp,'o',tFit(tFit<=tTemp(end)),ACF(tFit<=tTemp(end)))
-xlabel('Time [us]')
+xlabel('Time [s]')
 ylabel('g1(t)')
 title('g1 (raw and smooth fit)')
 legend('Raw','Fit')
@@ -269,8 +201,8 @@ tau = tFit;
 MSD_vec = (6/q^2)*(-log(ACF_vec));
 MSD = mean(MSD_vec,2);
 subplot(1,2,2)
-loglog(tau,MSD*1e+6,'o',tau,6*(kB*T/(6*pi*eta*R))*tau,'k--')
-xlabel('Time [us]')
+loglog(tau,MSD,'o',tau,6*(kB*T/(6*pi*eta*R))*tau,'k--')
+xlabel('Time [s]')
 ylabel('MSD(t)')
 legend('Data','Pure diffusive')
 title('MSD')
