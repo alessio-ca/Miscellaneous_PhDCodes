@@ -1,5 +1,9 @@
 % Data preparation for microrheology with QPD. Imports data from multiple QPD
 % signals (csv files from PicoScope).
+% Output format: 
+% - size*2*n matrix (size is number of timesteps, n is number
+%   of series)
+% - First n columns are X signal, last n columns are Y signal
 
 % Clear everything
 clear all; 

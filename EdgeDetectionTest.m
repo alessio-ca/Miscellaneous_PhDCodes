@@ -1,12 +1,14 @@
 clear all;
-%img=imread('F:\AC_2017_03_13\ODSizeDistro_Frames\40x_0.95_PS_FPS20_ODsizedistrostudy.13Mar2017_17.57.06_000000.tiff');
-img=imread('J:\ME_F108_SiOil_Frames\10x_0.45NA_ODs_ME_SiOil_F108_10Vstir_0.1mLPerHour.02Oct2017_20.51.26_000000.tiff');
+img=imread('F:\AC_2018_01_11\ME_F108_SiOil_Frames_IF\10x_0.45NA_ODs_ME_SiOil_F108_10Vst_0.5mlmin.11Jan2018_19.48.31_000000.tiff');
 
-%Detector parameters (see sections)
+
+%Detector parameters (see sections for typical values)
 lpDiam = 10;
-CannyParam = [0.6,7.];
-dilDiam = 5;
-radCorr = 1.3;
+CannyParam = [0.5,5.];
+dilDiam = 6;
+radCorr = 1.15;
+mindiam = 50;
+maxdiam = 400;
 
 
 %Contrast enhancement
@@ -22,7 +24,7 @@ subplot(1,2,2)
 imhist(imgJ,64)
 
 %Low-pass filtering and high-pass filtering
-%Typical values for fspecial:
+%Typical values for lpDiam:
 % - 10
 h = fspecial('disk',lpDiam);
 imgJ2 = imfilter(imgJ,h);
@@ -34,14 +36,17 @@ imshowpair(imgJ2,imgJ4,'montage')
 
 %%
 %Canny-edge detection & dilation
-%Typical values for edge:
+%Typical values for Canny:
+% - 0.3,5.
 % - 0.4,1.
 % - 0.4,5.
 % - 0.6,1.
 % - 0.6,7.
-%Typical values for strel:
+%Typical values for dilDiam:
 % - 1
+% - 3
 % - 5
+% - 10
 bw=edge(imgJ4,'canny',CannyParam(1),CannyParam(2));
 se=strel('disk',dilDiam);
 bw2=imdilate(bw,se);
@@ -49,9 +54,6 @@ bw2=imdilate(bw,se);
 figure(4)
 imshowpair(bw,bw2,'montage')
 bw2=not(bw2);
-
-mindiam = 50;
-maxdiam = 400;
 
 %Connecting components & filling holes
 obj=bwconncomp(bw2);

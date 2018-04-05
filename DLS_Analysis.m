@@ -1,13 +1,12 @@
 function [tau,MSD,ACF,MSD_vec,ACF_vec]=DLS_Analysis(t,data,varargin)
-% DLS_Analysis Estimation of MSD and G* from DLS autocorrelation
+% DLS_Analysis Estimation of g1 and MSD from DLS autocorrelation
 % data
 %
-% [tau,MSD,ACF,MSD_vec,ACF_vec]=DLS_Analysis(t,data) calculates the MSD and complex
-%   modulus G* from the autocorrelation function ICF obtained in a DLS
-%   experiment, using the inversion relation and Evans scheme for inverting
-%   the MSD into the complex modulus G. The measurement setup is assumed to 
-%   be a ZetaSizer APS Nano (Malvern).
-%  
+% [tau,MSD,ACF,MSD_vec,ACF_vec]=DLS_Analysis(t,data) calculates the
+%   autocorrelation function g1 and the MSD from the autocorrelation
+%   function ICF obtained in a DLS experiment, using the inversion relation.
+%   The measurement setup is assumed to be a ZetaSizer APS Nano (Malvern).
+%
 %  DATA can be a matrix containing several signals (one per column, all the same length).
 %  MSD_vec is the set of all the calculated MSDs.
 %  ACF_vec is the set of all the calculated ACFs.
@@ -20,6 +19,7 @@ function [tau,MSD,ACF,MSD_vec,ACF_vec]=DLS_Analysis(t,data,varargin)
 %       n       -   Solvent refractive index (default = 1.33)
 %       R       -   Bead radius (default = 115 nm)
 %       beta    -   Calculation of coherence factor (default = 1)
+%       Nrun    -   Iterations of the CONTIN routine (default = 10)
 %       cut     -   ACF cut value for fit (0<cut<1) (default = 0.1)
 %       tail    -   Fit times for tail characterization (default =
 %                   [0,0] i.e. no tail correction)
@@ -28,19 +28,19 @@ function [tau,MSD,ACF,MSD_vec,ACF_vec]=DLS_Analysis(t,data,varargin)
 
 
 % CREATED: Alessio Caciagli, University of Cambridge, October 2017
- T = 298;
+T = 298;
 for n = 1:2:length(varargin)
     if strcmpi(varargin{n},'T')
         T = varargin{n+1};
     end
 end
- eta = 0.0008872;
+eta = 0.0008872;
 for n = 1:2:length(varargin)
     if strcmpi(varargin{n},'eta')
         eta = varargin{n+1};
     end
 end
- n = 1.33;
+n = 1.33;
 for i = 1:2:length(varargin)
     if strcmpi(varargin{i},'n')
         n = varargin{i+1};
@@ -56,6 +56,12 @@ beta = 1;
 for i = 1:2:length(varargin)
     if strcmpi(varargin{i},'beta')
         beta = varargin{i+1};
+    end
+end
+Nrun = 1;
+for i = 1:2:length(varargin)
+    if strcmpi(varargin{i},'Nrun')
+        Nrun = varargin{i+1};
     end
 end
 cut = 0.1;
@@ -85,7 +91,7 @@ q = 4*pi*n*sin(theta/2)/lambda;
 %% g1(tau) calc. and fit to g1(tau) (for smoothness)
 
 alpha = 1e-2;
-I_vec = ones(100,size(data,2));
+I_vec = ones(10*Nrun,size(data,2));
 fit_vec = zeros(7,size(data,2));
 
 for j = 1:size(data,2)
@@ -108,7 +114,7 @@ for j = 1:size(data,2)
             A = [ones(length(tTemp(1:10)),1),tTemp(1:10),tTemp(1:10).^2];
             Coeff = A\dataTempLog;
             beta = exp(Coeff(1));
-         
+            
         case 0
             beta = 1;
             
@@ -149,7 +155,7 @@ for j = 1:size(data,2)
     switch fitmeth
         case 'CON'
             %CONTIN loop run
-            %default: 
+            %default:
             %   g_inf  = -7
             %   g_sup  = +1
             g_inf = -7;
@@ -159,7 +165,8 @@ for j = 1:size(data,2)
                 check=0;
                 coarse_s = logspace(g_inf,g_sup,10)';
                 coarse_g = ones(size(coarse_s));
-                [coarse_g,~,~] = CONTIN_Rilt(tTemp,dataTemp,coarse_s,coarse_g,alpha,'logarithmic',100,[],[],[],[],[]);
+                w = linspace(1,0.5,size(dataTemp,1)); %weights more the initial part of the decay
+                [coarse_g,~,~] = CONTIN_Rilt(tTemp,dataTemp,coarse_s,coarse_g,alpha,'logarithmic',100,[],[],[],[],w');
                 % s refinement
                 g_peak = find(coarse_g>0.01);
                 %default:
@@ -175,7 +182,7 @@ for j = 1:size(data,2)
                     check=1;
                 end
             end
-            for i = 2:10
+            for i = 2:Nrun
                 disp(['Iteration: ',num2str(i),'/10'])
                 s = logspace(g_inf,g_sup,i*10)';
                 g0 = interp1(coarse_s,coarse_g,s,'linear');
@@ -255,14 +262,6 @@ switch fitmeth
         error('Error: Unrecognized fit method.');
 end
 ACF = mean(ACF_vec,2);
-
-close all
-subplot(1,2,1)
-semilogy(tTemp,dataTemp,'o',tFit(tFit<=tTemp(end)),ACF(tFit<=tTemp(end)))
-xlabel('Time [us]')
-ylabel('g1(t)')
-title('g1 (raw and smooth fit)')
-legend('Raw','Fit')
 
 %% MSD calculation
 tau = tFit;

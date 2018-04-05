@@ -209,8 +209,8 @@ loglog(t(plotinterval),data(plotinterval,1),'o')
 hold on
 loglog(t(plotinterval),data(plotinterval(1),1)*data(plotinterval(end),1)./data(plotinterval,1),'o')
 loglog(t_downsample,data_downsample(:,1),'s','MarkerEdgeColor','k','MarkerFaceColor',[0 0 1],'MarkerSize',10)
-spline_downsample = fnval(t_downsample,data_spline)';
-loglog(t_downsample',spline_downsample(1,:)','--k');
+spline_downsample = fnval(t_downsample,data_spline);
+loglog(t_downsample',spline_downsample(1,:),'--k');
 %set(get(get(h,'Annotation'),'LegendInformation'),'IconDisplayStyle','off');
 legend('Exp','Exp (inv)','Log-sampling','Location','northeast')
 xlabel('Time (s)')
@@ -269,18 +269,35 @@ fpinf = bf_inf(2)*bf_inf(3)*t_oversample(end).^(bf_inf(3)-1);
 evans_fft = repmat(1i*omega,1,size(data_oversample,2))*f0;
 
 A_Evans = diff(data_oversample)./diff(t_oversample);
-if BM == 0
-    A_Evans = [0;(data_oversample(1) - f0)/t_oversample(1);A_Evans;fpinf];
-    t_oversample = [0;t_oversample];
-else
-    A_Evans = [0;A_Evans];
-    t_oversample=t_oversample(1:end-1);
+switch BM
+    case 0
+        A_Evans = [0;(data_oversample(1) - f0)/t_oversample(1);A_Evans;fpinf];
+        t_oversample = [0;t_oversample];
+        
+    case 1
+        A_Evans = [0;(data_oversample(1) - f0)/t_oversample(1);A_Evans];
+        t_oversample = [0;t_oversample(1:end-1)];
+        
+    case 2
+        A_Evans = [0;A_Evans;fpinf];
+        
+    case 3
+        A_Evans = [0;A_Evans];
+        t_oversample = t_oversample(1:end-1);
+        
+    otherwise
+        error('Error. You destroyed the world! Don''t play with black magic!')
+        
 end
 diffA_Evans = diff(A_Evans);
 diffA_Evans(abs(diffA_Evans)<Eps)=0;
 
 %Output residuals
-datainterval=unique(floor(logspace(0,log10(length(t_oversample)),1000)));
+if length(t_oversample)<1e5
+    datainterval=1:length(t_oversample);
+else
+    datainterval=unique(floor(logspace(0,log10(length(t_oversample)),1e5)));
+end
 DeltaA=abs(diffA_Evans(datainterval,1));
 
 

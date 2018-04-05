@@ -159,14 +159,14 @@ end
 %%
 switch fitmeth
     case 'CON'
-        tFit = logspace(floor(log10(tTemp(1))),1+log10(tTemp(end)))'; %Extrapolated
+        tFit = logspace(log10(tTemp(1)),1+log10(tTemp(end)))'; %Extrapolated
         ACF_vec = zeros(length(tFit),size(data,2));
         for i = 1:length(tFit)
             ACF_vec(i,:) = sum(I_vec.*exp(-tFit(i)./s),1);
         end
         
     case 'RAT'
-        tFit = logspace(floor(log10(tTemp(1))),1+log10(tTemp(end)))'; %Extrapolated
+        tFit = logspace(log10(tTemp(1)),1+log10(tTemp(end)))'; %Extrapolated
         ACF_vec = zeros(length(tFit),size(data,2));
         fit_33 = @(x,i) (fit_vec(1,i).*x.^3 + fit_vec(2,i).*x.^2 + fit_vec(3,i).*x + fit_vec(4,i))./(x.^3 + fit_vec(5,i).*x.^2 + fit_vec(6,i).*x + fit_vec(7,i));
         for i = 1:size(data,2)
@@ -182,7 +182,7 @@ switch fitmeth
         if size(ACF_vec,1)==1
             ACF_vec=ACF_vec';
         end
-        ACF_vec = ACF_vec./fnval(0.999*tFit(1),data_spline);
+        ACF_vec = ACF_vec./fnval(0.9999999*tFit(1),data_spline);
         
     otherwise
         error('Error: Unrecognized fit method.');
@@ -220,16 +220,4 @@ xlabel('Time [s]')
 ylabel('MSD(t)')
 legend('Data','Pure diffusive')
 title('MSD')
-
-%MSDFit_Spl = csape(tFit',MSD_vec');
-% %% Microrheology
-% t_Micro = (1e-6:1e-6:1)';
-% MSD_Micro = fnval(t_Micro,MSDFit_Spl)';
-% if size(MSD_Micro,1)==1
-%     MSD_Micro=MSD_Micro';
-% end
-% Jfactor = 1 / (kB*T/(pi*R));
-% [omega,G,~,G_vec]=MSDtoG_Evans_oversampling(t_Micro,MSD_Micro,1e+6,'Jfactor',Jfactor);
-
-
 
