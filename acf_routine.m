@@ -17,8 +17,8 @@ function [acf,tau,acf_err,acf_vec] = acf_routine(dt,Vx,varargin)
 
 
 % Maximum delay & normalization
-taumax = +Inf;
 norm = 1;
+taumax = +Inf;
 for n = 1:2:length(varargin)
     if strcmpi(varargin{n},'taumax')
         taumax = varargin{n+1};
@@ -29,7 +29,6 @@ for n = 1:2:length(varargin)
         end
     end
 end
-
 if isfinite(taumax)
     maxlags = ceil(taumax/dt);
 else
