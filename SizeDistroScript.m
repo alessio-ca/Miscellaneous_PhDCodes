@@ -13,6 +13,8 @@ end
 % -    10x 0.45 NA: 169.33 px to 100 um
 % -    20x 0.75 NA: 342.67 px to 100 um
 % -    40x 0.95 NA: 689.65 px to 100 um
+% -    60x 1.20 NA: 1000.0 px to 100 um
+
 convfac = 169.33;
 h=histogram(diami*(100/convfac),'Normalization','probability','BinWidth',3);
 disp(['Mean size: ',num2str(mean(diami*(100/convfac)))])

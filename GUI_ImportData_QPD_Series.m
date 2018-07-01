@@ -11,7 +11,7 @@ close all;
 clc;
 
 %Input: enter directory name
-folder_name=uigetdir('/Users/AleCac/Desktop/');
+folder_name=uigetdir('L:\Microrheology\DNA_Hydrogels\1,0%_DNA\25C\1MHz');
 listings=dir([folder_name,'/','*.csv']);
 numFiles = length(listings);
 

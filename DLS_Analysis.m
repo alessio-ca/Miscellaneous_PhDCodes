@@ -1,4 +1,4 @@
-function [tau,MSD,ACF,MSD_vec,ACF_vec]=DLS_Analysis(t,data,varargin)
+function [tau,MSD,ACF,MSD_vec,ACF_vec,I_vec]=DLS_Analysis(t,data,varargin)
 % DLS_Analysis Estimation of g1 and MSD from DLS autocorrelation
 % data
 %
@@ -10,6 +10,7 @@ function [tau,MSD,ACF,MSD_vec,ACF_vec]=DLS_Analysis(t,data,varargin)
 %  DATA can be a matrix containing several signals (one per column, all the same length).
 %  MSD_vec is the set of all the calculated MSDs.
 %  ACF_vec is the set of all the calculated ACFs.
+%  I_vec is the set of all the calculated g(s) coefficients. 
 
 % [tau,MSD,ACF,MSD_vec,ACF_vec]=DLS_Analysis(t,data,'PropertyName',PropertyValue)
 %  permits to set the value of PropertyName to PropertyValue.
@@ -58,7 +59,7 @@ for i = 1:2:length(varargin)
         beta = varargin{i+1};
     end
 end
-Nrun = 1;
+Nrun = 10;
 for i = 1:2:length(varargin)
     if strcmpi(varargin{i},'Nrun')
         Nrun = varargin{i+1};
