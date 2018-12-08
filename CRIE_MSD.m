@@ -1,4 +1,4 @@
-function [s,g,yfit,lambda,info] = CRIE(t,y,Ng,Nl,input)
+function [s,g,yfit,lambda,info] = CRIE_MSD(t,y,Ng,Nl,input)
 % CRIE Constrained Regularized method for inverting Intergal Equation (CRIE) 
 % 
 % [s,yfit,lambda,info] = CRIE(t,y,Ng,Nl,input) solves the integral equation
@@ -272,7 +272,9 @@ end
 
 %Error estimation
 %The first run is always unweighted unless the weights are user specified
-if iwt == 4
+if iwt == 2
+    wt = (4*y.^2) ./ (1 + y.^2);
+elseif iwt == 4
     if length(wt) ~= Ny
         error('Error in user''s specification of the weights. Check wg');
     end
@@ -444,7 +446,7 @@ subplot(2,2,[1,3])
 if Igrid == 1
     plot(t,y,'*',t,yfit)
 else
-    semilogx(t,y,'*',t,yfit)
+    loglog(t,y,'*',t,yfit)
 end
 xlabel('t')
 ylabel('y(t)')

@@ -267,6 +267,8 @@ fpinf = bf_inf(2)*bf_inf(3)*t_oversample(end).^(bf_inf(3)-1);
 
 %Calculate the single terms
 evans_fft = repmat(1i*omega,1,size(data_oversample,2))*f0;
+evans_fft_Mod = repmat(omega,1,size(data_oversample,2))*f0;
+
 
 A_Evans = diff(data_oversample)./diff(t_oversample);
 switch BM
@@ -304,11 +306,14 @@ DeltaA=abs(diffA_Evans(datainterval,1));
 %Calculate the summatory
 for i=1:length(omega)
     evans_fft(i,:)=evans_fft(i,:)+sum(diffA_Evans.*exp(-1i*omega(i)*t_oversample));
+    evans_fft_Mod(i,:)=evans_fft_Mod(i,:)+sum(diffA_Evans.*exp(-omega(i)*t_oversample));
 end
 
 %Invert the result and multiply
 G = repmat(1i*omega,1,size(data_oversample,2))./evans_fft;
+G_Mod = repmat(omega,1,size(data_oversample,2))./evans_fft_Mod;
 G=G(omega<omega(end)/10);
+G_Mod=G_Mod(omega<omega(end)/10);
 omega=omega(omega<omega(end)/10); %Exclude the upper 10% due to artifacts
 Gp = real(G);
 Gpp = imag(G);

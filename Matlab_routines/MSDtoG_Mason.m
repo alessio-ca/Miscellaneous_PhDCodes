@@ -25,6 +25,7 @@ function [omega,G,G_err,G_vec]=MSDtoG_Mason(t,data,varargin)
 %       CG          -   Coarse-graining factor (default = 1.45)
 %       TauMax      -   Maximum time delay to be considered (default = +Inf)
 %       Gsampling   -   Sampling style for G points (default = "log")
+%       Gpoints     -   Number of Gpoints (default = 100)
 %           Allowed styles: logarithmic (log), linear (lin)
 %       width       -   Width of Gaussian window for polyfitw (default =
 %                       0.7)
@@ -67,6 +68,12 @@ Gsampling = 'log';
 for n = 1:2:length(varargin)
     if strcmpi(varargin{n},'Gsampling')
         Gsampling = varargin{n+1};
+    end
+end
+Gpoints = 100;
+for n = 1:2:length(varargin)
+    if strcmpi(varargin{n},'Gpoints')
+        Gpoints = varargin{n+1};
     end
 end
 width = 0.7;
@@ -144,10 +151,10 @@ disp('Calculating...')
 %Define omega vector 
 switch Gsampling
     case 'log'
-        t_G = logspace(log10(t_downsample(1)),log10(t_downsample(end)),100)';
+        t_G = logspace(log10(t_downsample(1)),log10(t_downsample(end)),Gpoints)';
         
     case 'lin'
-        t_G = linspace(t_downsample(1),t_downsample(end),100)';
+        t_G = linspace(t_downsample(1),t_downsample(end),Gpoints)';
         
     otherwise
         error('Error: Unrecognized G sampling style.');
