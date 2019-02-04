@@ -8,7 +8,7 @@
 close all
 
 %Input: enter mother directory name (it must end with a "\" sign)
-folder1='/Users/AleCac/Desktop/Video_JAvi/18_Aug/';
+folder1='J:\DNAHydrogel_ParticleTracking_2019_01_24\L0_1.5%\';
 
 
 %Input: tag of the desired movie files (type '*' to select all)
@@ -30,7 +30,7 @@ for i=1:length(list)
     offset=0;
     img=squeeze(movie2frame(filename,offset,1));
     
-    [filter{1},r_max]=CreateFilter(img);
+    [filter{1,1},filter{1,2},r_max]=CreateFilter(img);
     
     
     %The movie2frame routine processes all the file by default. Modify as
