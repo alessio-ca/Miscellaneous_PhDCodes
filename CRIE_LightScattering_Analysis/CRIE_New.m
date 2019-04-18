@@ -362,8 +362,8 @@ Aw = diag(sqrt(wt))*A;
 yw = y.*sqrt(wt);
 
 % Array scaling
-AsscaleM = mean(Aw,1);
-AsscaleS = std(Aw,1);
+%AsscaleM = mean(Aw,1);
+%AsscaleS = std(Aw,1);
 %Aw = (Aw - repmat(AsscaleM,size(Aw,1),1))./repmat(AsscaleS,size(Aw,1),1);
 
 

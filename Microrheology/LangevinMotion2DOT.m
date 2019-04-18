@@ -56,17 +56,23 @@ end
 [msd,t_msd]=msd_routine(dt,r,'TauMax',dt*length(t)/10);
 [vacf,t_vacf]=acf_routine(dt,v,'TauMax',dt*length(t)/100);
 
-
+%%
 figure(1)
 loglog(t_msd,msd)
 hold on
 loglog(t_msd,2*D*t_msd)
 hold off
+title('Mean Square Displacement')
+xlabel('Time (s)')
+ylabel('MSD (m^2/s)')
 
 figure(2)
 semilogx(t_vacf,vacf)
 hold on
 semilogx(t_vacf,exp(-gamma*t_vacf))
 hold off
+title('Velocity Autocorrelation Function')
+xlabel('Time (s)')
+ylabel('VACF')
 
 toc
