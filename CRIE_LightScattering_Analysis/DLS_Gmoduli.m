@@ -14,9 +14,9 @@
 clear variables
 close all
 
-NT = 7; %Number of temperatures
-Tin = 29;
-Tstep = 3;
+NT = 11; %Number of temperatures
+Tin = 60;
+Tstep = 2;
 Id = 'SNR';
 
 Trend = -1;
@@ -46,19 +46,19 @@ fM = ones(NT,1);
 
 for i=1:NT
     load([PathName,Id,'_T_',num2str(Tin + Trend*(i-1)*Tstep)]);
-    fP(i) = 6*D(Tin + Trend*(i-1)*Tstep)*tau(1)/(sqrt(i));
-    fP(i) = -fP(i)*(q^2/6)/log(ACF(1));
+    %fP(i) = 6*D(Tin + Trend*(i-1)*Tstep)*tau(1)/(sqrt(i));
+    %fP(i) = -fP(i)*(q^2/6)/log(ACF(1));
 end
-fP(2) = fP(2)*1.2;
-fP(4) = fP(4)*0.85;
-fP = 0.5*fP;
+%fP(2) = fP(2)*1.2;
+%fP(4) = fP(4)*0.85;
+%fP = 0.5*fP;
 %% G* calculation
 for i=1:NT
     load([PathName,Id,'_T_',num2str(Tin + Trend*(i-1)*Tstep)]);
     tau(ACF==0) = [];
     ACF(ACF==0) = []; %Remove zeros
     MSD = (6/q^2)*(-log(fM(i).*ACF.^fP(i)));
-    [omega,G]=MSDtoG_Mason(tau,MSD,'R',115e-9,'CG',1.01,'T',273.15 + Tin + Trend*(i-1)*Tstep);
+    [omega,G]=MSDtoG_Mason(tau*1e-6,MSD,'R',115e-9,'CG',1.01,'T',273.15 + Tin + Trend*(i-1)*Tstep);
     %[omega,G]=MSDtoG_Evans_oversampling(tau,MSD,1/tau(1),'R',115e-9,'CG',1.01,'T',273.15 + Tin - (i-1)*Tstep,'Nf0',5,'Nfinf',5);
     save([PathName,'T_',num2str(Tin + Trend*(i-1)*Tstep),'_G'],'omega','G');
 end

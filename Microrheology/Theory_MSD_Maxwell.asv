@@ -189,7 +189,7 @@ ylabel('G'',G'''' [Pa]')
 legend('G''  - KC','G''''  - KC','G'' - Mason','G''''  - Mason','G''  - Evans','G''''  - Evans','G''  - Theory','G''''  - Theory','Location','northwest')
 
 %% Test 4: Viscoelastic Material (with Noise)
-
+%% Test 2: Viscoelastic Material
 eta_Max = 500*eta;
 G_Max = 1e2;
 m_star = m_p + 0.5*m_f;
@@ -197,11 +197,9 @@ tau_p = m_star/(6*pi*eta*R);
 tau_Max = eta_Max/G_Max;
 Omega=sqrt(6*pi*G_Max*R/m_star - 0.25*(1/tau_Max - 1/tau_p)^2);
 Damp_const = 0.5*(1/tau_Max + 1/tau_p); 
-[MSD,~,~] = Gen_Maxwell_fun(t,Omega,Damp_const,tau_Max,tau_p);
+[MSD,~,dMSD] = Gen_Maxwell_fun(t,Omega,Damp_const,tau_Max,tau_p);
 MSD = (3*kB*T/m_star)*MSD;
-for i = 1:length(MSD)
-    MSD(i) = MSD(i) + rand(1)*MSD(i);
-end
+
 
 dMSD_Fit = dMSD;
 t_Fit = t;

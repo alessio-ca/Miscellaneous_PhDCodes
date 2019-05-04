@@ -10,9 +10,9 @@
 clear variables
 close all
 
-NT = 7; %Number of temperatures
-Tin = 29;
-Tstep = 3;
+NT = 11; %Number of temperatures
+Tin = 60;
+Tstep = 2;
 Id = 'SNR';
 
 Trend = -1;

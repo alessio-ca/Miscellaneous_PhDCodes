@@ -6,8 +6,6 @@
 %Input data are variables with names
 % - tau (output from DLS_Analysis)
 % - ACF (output from DLS_Analysis)
-% - tau_Long (output from DLS_Analysis)
-% - ACF_Long (output from DLS_Analysis)
 % - SNR (raw from acquisition data)
 
 %Assumes decreasing temperatures with Trend = -1
@@ -19,7 +17,7 @@ close all
 NM = 1; %Number of measurements for each temperature
 NT = 8; %Number of temperatures
 Tin = 60;
-Tstep = 5;
+Tstep = 2;
 
 Trend = -1;
 Avg = 0;
@@ -70,7 +68,7 @@ else
         SNR_T = SNR((i-1)*NM + (1:NM));
         [~,I] = max(SNR_T);
         load([PathName,'T_',num2str(Tin + Trend*(i-1)*Tstep),'_',num2str(I)]);
-        save([PathName,'SNR_T_',num2str(Tin + Trend*(i-1)*Tstep)],'tau','ACF','tau_Long','ACF_Long','MSD');
+        save([PathName,'SNR_T_',num2str(Tin + Trend*(i-1)*Tstep)],'tau','ACF','MSD');
     end
 end
 

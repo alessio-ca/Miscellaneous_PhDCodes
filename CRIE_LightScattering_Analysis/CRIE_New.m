@@ -414,14 +414,15 @@ if isempty(Lx)
     index = length(lambdaV);
     k_c = index;
 else
-    [k_c,sol,Lx,index] =  CRIE_corner_New(sol,Lx);
+    [k_c,sol_c,Lx_c] =  CRIE_corner_New(sol,Lx,lambdaV);
 end
-if isempty(k_c)
-    warning('CRIE:warnings', 'Optimal lambda has not been individuated. Selecting highest lambda in list.');
-    index = length(lambdaV);
-    k_c = index;
-end
-lambda = lambdaV(k_c);
+%if isempty(k_c)
+%    warning('CRIE:warnings', 'Optimal lambda has not been individuated. Selecting highest lambda in list.');
+%    index = length(lambdaV);
+%    k_c = index;
+%end
+%lambda = lambdaV(k_c);
+lambda = k_c;
 if Aeq == 0
     if Anq == 0
         [s,~,~,~] = lsqlin([C;lambda*R],[eta(:);zeros(size(R,1),1)],[],[],[],[],[],[],[],options);
@@ -477,12 +478,20 @@ ylabel('g(s)')
 
 subplot(2,2,4)
 if ~isempty(Lx)
-    loglog(sol,Lx,'k--o')
-    hold on
-    loglog([min(sol) - 0.2*(max(sol) - min(sol)),sol(index)],[Lx(index),Lx(index)],':r',...
-        [sol(index),sol(index)],[0.5*min(Lx),Lx(index)],':r')
-    hold off
-    xlabel('residual norm || A x - b ||')
-    ylabel('solution (semi)norm || L x ||');
+    %    loglog(sol,Lx,'k--o')
+    %    hold on
+    %    loglog([min(sol) - 0.2*(max(sol) - min(sol)),sol(index)],[Lx(index),Lx(index)],':r',...
+    %        [sol(index),sol(index)],[0.5*min(Lx),Lx(index)],':r')
+    %    hold off
+    %    xlabel('residual norm || A x - b ||')
+    %    ylabel('solution (semi)norm || L x ||');
+    plot_lc(sol,Lx,'o')
+    ax = axis;
+    HoldState = ishold; hold on;
+    loglog([min(sol)/100,sol_c],[Lx_c,Lx_c],':r',...
+        [sol_c,sol_c],[min(Lx)/100,Lx_c],':r')
+    title(['L-curve corner at ',num2str(k_c)]);
+    axis(ax)
+    if (~HoldState), hold off; end
 end
 end

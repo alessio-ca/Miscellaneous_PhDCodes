@@ -1,4 +1,4 @@
-function [tau,MSD,ACF,tau_Long,ACF_Long,MSD_vec,ACF_vec,I_vec]=DLS_CRIEAnalysis_Simple(t,data,varargin)
+function [tau,MSD,ACF,MSD_vec,ACF_vec,I_vec]=DLS_CRIEAnalysis_Simple(t,data,varargin)
 % DLS_CRIEAnalysis_Simple
 % Estimation of g1 and MSD from DLS autocorrelation
 % data using a Constrained Regularization of Integral Equations (CRIE)
@@ -91,7 +91,7 @@ q = 4*pi*n*sin(theta/2)/lambda;
 
 I_vec = ones(Ng,size(data,2));
 ACF_vec = zeros(size(t,1),size(data,2));
-ACF_vec_Long = zeros(size(t,1),size(data,2));
+ACF
 for j = 1:size(data,2)
     
     %Delete first Nnoise points (usually noise) & format data
@@ -165,20 +165,16 @@ for j = 1:size(data,2)
             tExt = varargin{i+1};
         end
     end
-    tLong = logspace(log10(tTemp(1)),log10(tExt),length(tTemp))';
+    tLong = logspace(log10(tTemp(1)),log10(tExt))';
     ALong = CRIE_Kernel(tLong*1e-6,info.g,info.c,info.Kernel,info.grid);
     yLong = ALong * s;
-    ACF_vec_Long(1:length(yLong),j) = yLong;
     
     
 end
 ACF_vec(size(tTemp)+1:end,:) = [];
-ACF_vec_Long(size(tLong)+1:end,:) = [];
 ACF = mean(ACF_vec,2);
-ACF_Long = mean(ACF_vec_Long,2);
 
 %% MSD calculation
 tau = tTemp;
-tau_Long = tLong;
 MSD_vec = (6/q^2)*(-log(ACF_vec));
 MSD = mean(MSD_vec,2);

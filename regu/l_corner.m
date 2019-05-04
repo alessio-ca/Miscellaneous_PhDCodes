@@ -28,11 +28,8 @@ function [reg_c,rho_c,eta_c] = l_corner(rho,eta,reg_param,U,s,b,method,M)
 
 % Per Christian Hansen, DTU Compute, January 31, 2015.
 
-% Ensure that rho and eta are column vectors. Sort them (monotonic in rho)
+% Ensure that rho and eta are column vectors.
 rho = rho(:); eta = eta(:);
-[~,I] = sort(rho);
-rho=rho(I);
-eta=eta(I);
 
 % Set default regularization method.
 if (nargin <= 3)
@@ -148,7 +145,6 @@ elseif (strncmp(method,'tsvd',4) || strncmp(method,'tgsv',4) || ...
 
   % Extract abscissa and ordinate splines and differentiate them.
   % Compute as many function values as default in spleval.
-
   P     = spleval(pp);  dpp   = fnder(pp);
   D     = spleval(dpp); ddpp  = fnder(pp,2);
   DD    = spleval(ddpp);

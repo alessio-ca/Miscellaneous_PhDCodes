@@ -1,4 +1,4 @@
-function [k_corner,info] = corner(rho,eta,fig)
+function [k_corner,rho,eta,index,info] = CRIE_corner(rho,eta,fig)
 %CORNER Find corner of discrete L-curve via adaptive pruning algorithm.
 %
 % [k_corner,info] = corner(rho,eta,fig)
@@ -44,6 +44,7 @@ end
 if length(rho)<3
     error('Vectors rho and eta must have at least 3 elements')
 end
+
 rho = rho(:);       % Make rho and eta column vectors.
 eta = eta(:);
 
@@ -72,7 +73,6 @@ eta = eta(kept);
 
 if any(rho(1:end-1)<rho(2:end)) | any(eta(1:end-1)>eta(2:end))
 	info = info + 10;
-	warning('Corner:warnings', 'Lack of monotonicity')
 end
 
 % Prepare for adaptive algorithm.
@@ -116,8 +116,8 @@ end
 % Issue a warning and return if none of the pruned L-curves are convex.
 if convex==0
 	k_corner = [];
+    index = [];
 	info = info + 100;
-	warning('Corner:warnings', 'Lack of convexity')
 	return
 end
 

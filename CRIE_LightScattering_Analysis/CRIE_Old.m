@@ -63,8 +63,6 @@ function [s,g,yfit,lambda,info] = CRIE(t,y,Ng,Nl,input)
 %             Default = 40
 %   - alpha_lims: specifies the upper and lower values of the probed
 %                 regularizer values. Default: alpha_lims = [0.01,100]
-%   - l_lims: specifies the upper values for rho and eta in the L-corner
-%             finding routine. Default: l_lims = [+Inf,+Inf]
 %   - Nord: specifies the regularization order. 
 %           1 = Ridge Regression, 2 = Second derivative (default)
 %   - Nend: specifies the number of null points at the grid extrema. 
@@ -172,15 +170,6 @@ end
 
 alphaV = logspace(log10(alpha_min),log10(alpha_max),Nalpha);
 
-if isfield(input, 'l_lims')
-    rho_max = input.l_lims(1);
-    eta_max = input.l_lims(2);
-else
-    rho_max = +Inf;
-    eta_max = +Inf;
-end
-
-
 if isfield(input, 'Nord')
     Nord = input.Nord; %Order of regularizor
 else
@@ -207,9 +196,6 @@ elseif Igrid == 2
 else
     error('Unknown grid specification. Check the parameter "Igrid".');
 end
-%gm = g(1) - (g(2)-g(1));
-%gp = g(end) + (g(2)-g(1));
-%gpp = gp + (g(2)-g(1));
 
 if Iquad == 1
     c = ones(1,Ng);
@@ -231,7 +217,6 @@ c = c(:); % must be column
 %Kernel generation
 [gM,~] = meshgrid(g,t);
 [cM,tM] = meshgrid(c,t);
-
 if Kernel == 1
     if Igrid == 2
         A = cM.*(log(10)*10.^(gM)).*exp(-tM.*10.^(gM));
@@ -287,9 +272,7 @@ end
 
 %Error estimation
 %The first run is always unweighted unless the weights are user specified
-if iwt == 2
-    wt = (4*y.^2) ./ (1 + y.^2);
-elseif iwt == 4
+if iwt == 4
     if length(wt) ~= Ny
         error('Error in user''s specification of the weights. Check wg');
     end
@@ -337,7 +320,20 @@ else
     Nbg = 0;
 end
 
-%% Treatment of Equalities/Inequalities
+
+
+%% Computation
+Lx = zeros(size(alphaV));
+sol = zeros(size(alphaV));
+lambdaV = zeros(size(alphaV));
+
+%QR factorization (if needed)
+if Ny > Nx
+    [C,eta]=CRIE_qr(diag(sqrt(wt))*A,y.*sqrt(wt));
+else
+    C = diag(sqrt(wt))*A;
+    eta = y.*sqrt(wt);
+end
 
 % Equality constraints treatment (if needed)
 if Ny0 == 1
@@ -366,33 +362,12 @@ if Nreg < Nxe
     R = [R;zeros(Nxe-Nreg,Nx)];
 end
 
-%% Computation
-Lx = zeros(size(alphaV));
-sol = zeros(size(alphaV));
-lambdaV = zeros(size(alphaV));
-
-Aw = diag(sqrt(wt))*A;
-yw = y.*sqrt(wt);
-
-% Array scaling
-%AsscaleM = mean(Aw,1);
-%AsscaleS = std(Aw,1);
-%Aw = (Aw - repmat(AsscaleM,size(Aw,1),1))./repmat(AsscaleS,size(Aw,1),1);
-
-%QR factorization (if needed)
-if Ny > Nx
-    [C,eta]=CRIE_qr(Aw,yw);
-else
-    C = Aw;
-    eta = yw;
-end
-
 options = optimoptions(@lsqlin,'Algorithm','active-set','Display','off','MaxIter',1500);
 id ='optimlib:lsqlin:WillBeRemoved';
 warning('off',id)
 
 progressbar %Create progress bar
-
+    
 % Active-set solver with constraints
 for i = 1:Nalpha
     alphaP=alphaV(i);
@@ -424,15 +399,20 @@ if isempty(Lx)
     index = length(lambdaV);
     k_c = index;
 else
-    [k_c,sol_c,Lx_c] =  CRIE_corner(sol,Lx,lambdaV,rho_max,eta_max);
+    [~,I] = sort(sol);
+    sol=sol(I);
+    Lx=Lx(I);
+    lambdaV = lambdaV(I);
+    [k_c,sol,Lx,index] =  CRIE_corner(sol,Lx);
+    k_c = 27;
+    index = 27;
 end
-%if isempty(k_c)
-%    warning('CRIE:warnings', 'Optimal lambda has not been individuated. Selecting highest lambda in list.');
-%    index = length(lambdaV);
-%    k_c = index;
-%end
-%lambda = lambdaV(k_c);
-lambda = k_c;
+if isempty(k_c)
+    warning('CRIE:warnings', 'Optimal lambda has not been individuated. Selecting highest lambda in list.');
+    index = length(lambdaV);
+    k_c = index;
+end
+lambda = lambdaV(k_c-7);
 if Aeq == 0
     if Anq == 0
         [s,~,~,~] = lsqlin([C;lambda*R],[eta(:);zeros(size(R,1),1)],[],[],[],[],[],[],[],options);
@@ -442,7 +422,6 @@ if Aeq == 0
 else
     [s,~,~,~] = lsqlin([C;lambda*R],[eta(:);zeros(size(R,1),1)],-Anq(:,1:end-1),-Anq(:,end),Aeq(:,1:end-1),Aeq(:,end),[],[],[],options);
 end
-
 yfit = A*s;
 
 %% Write to info structure
@@ -458,12 +437,14 @@ end
 info.lambda = lambda;
 info.c = c;
 info.A = A;
-info.Kernel = Kernel;
 info.Coeff = Coeff.*s(1:end-Nl);
 info.Aeq = Aeq;
 info.Anq = Anq;
 info.R = R;
 info.wt = wt;
+info.k_c = k_c;
+info.sol = sol;
+info.Lx = Lx;
 info.date = datestr(now,30);
 %% Plotting
 close all
@@ -489,20 +470,13 @@ ylabel('g(s)')
 
 subplot(2,2,4)
 if ~isempty(Lx)
-    %    loglog(sol,Lx,'k--o')
-    %    hold on
-    %    loglog([min(sol) - 0.2*(max(sol) - min(sol)),sol(index)],[Lx(index),Lx(index)],':r',...
-    %        [sol(index),sol(index)],[0.5*min(Lx),Lx(index)],':r')
-    %    hold off
-    %    xlabel('residual norm || A x - b ||')
-    %    ylabel('solution (semi)norm || L x ||');
-    plot_lc(sol,Lx,'o')
-    ax = axis;
-    HoldState = ishold; hold on;
-    loglog([min(sol)/100,sol_c],[Lx_c,Lx_c],':r',...
-        [sol_c,sol_c],[min(Lx)/100,Lx_c],':r')
-    title(['L-curve corner at ',num2str(k_c)]);
-    axis(ax)
-    if (~HoldState), hold off; end
+    loglog(sol,Lx,'k--o')
+    plotDet = gca;
+    hold on
+    loglog([plotDet.XLim(1),sol(index)],[Lx(index),Lx(index)],':r',...
+        [sol(index),sol(index)],[plotDet.YLim(1),Lx(index)],':r')
+    hold off
+    xlabel('residual norm || A x - b ||')
+    ylabel('solution (semi)norm || L x ||');
 end
 end

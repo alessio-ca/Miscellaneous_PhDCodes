@@ -10,7 +10,7 @@ function points = spleval(f)
 % Simplified by Per Christian Hansen, IMM, 04/16/98.
 
 % Set default number of points.
-npoints = 300;
+npoints = 250;
 
 if (f.form(1)=='B'), f = sp2pp(f); end
 

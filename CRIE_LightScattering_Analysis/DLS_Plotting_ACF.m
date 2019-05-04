@@ -1,7 +1,9 @@
 %Script to plot the ACFs and MSDs data from DLS_Analysis 
 %Input data are variables with names
 % - tau
+% - tau_Long
 % - ACF
+% - ACF_Long
 % - MSD
 
 %Assumes decreasing temperatures with Trend = -1
@@ -10,9 +12,9 @@
 clear variables
 close all
 
-NT = 7; %Number of temperatures
-Tin = 29;
-Tstep = 3;
+NT = 8; %Number of temperatures
+Tin = 60;
+Tstep = 5;
 Id = 'SNR';
 
 Trend = -1;
@@ -40,14 +42,14 @@ fP = ones(NT,1);
 fM = ones(NT,1);
 for i=1:NT
     load([PathName,Id,'_T_',num2str(Tin + Trend*(i-1)*Tstep)]);
-    fP(i) = 6*D(Tin + Trend*(i-1)*Tstep)*tau(1)/(sqrt(i));
-    fP(i) = -fP(i)*(q^2/6)/log(ACF(1));
+    %fP(i) = 6*D(Tin + Trend*(i-1)*Tstep)*tau(1)/(sqrt(i));
+    %fP(i) = -fP(i)*(q^2/6)/log(ACF(1));
 end
 initialColorOrder = get(gca,'ColorOrder');
 newDefaultColors = flip(cool(NT));
-fP(2) = fP(2)*1.2;
-fP(4) = fP(4)*0.85;
-fP = 0.5*fP;
+%fP(2) = fP(2)*1.2;
+%fP(4) = fP(4)*0.85;
+%fP = 0.5*fP;
 %% ACF plot
 figure(1)
 subplot(1,2,1)
@@ -56,7 +58,7 @@ hold on
 
 for i=1:NT
     load([PathName,Id,'_T_',num2str(Tin + Trend*(i-1)*Tstep)]);
-    semilogx(tau,fM(i)*ACF.^fP(i));
+    semilogx(tau_Long*1e-6,fM(i)*ACF_Long.^fP(i));
 end
 hold off
 h=gca;
@@ -72,9 +74,9 @@ set(gca, 'ColorOrder', newDefaultColors, 'NextPlot', 'replacechildren');
 hold on
 for i=1:NT
     load([PathName,Id,'_T_',num2str(Tin + Trend*(i-1)*Tstep)]);
-    loglog(tau,1e+12*(6/q^2)*(-log(fM(i).*ACF.^fP(i))),'*');
+    loglog(tau*1e-6,1e+12*(6/q^2)*(-log(fM(i).*ACF.^fP(i))),'*');
 end
-loglog(tau,1e+12*6*D(Tin)*tau,'k--')
+loglog(tau*1e-6,1e+12*6*D(Tin)*tau*1e-6,'k--')
 hold off
 h=gca;
 h.XScale='log';

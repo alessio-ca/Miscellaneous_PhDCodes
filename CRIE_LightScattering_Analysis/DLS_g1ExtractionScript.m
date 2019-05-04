@@ -13,10 +13,10 @@
 
 clear variables
 
-NM = 2; %Number of measurements for each temperature
-NT = 7; %Number of temperatures
-Tin = 29;
-Tstep = 3;
+NM = 1; %Number of measurements for each temperature
+NT = 8; %Number of temperatures
+Tin = 60;
+Tstep = 5;
 
 Trend = -1;
 
@@ -29,7 +29,7 @@ end
 for i=1:NT
     for j=1:NM
         %[tau,MSD,ACF]=DLS_Analysis(t((i-1)*NM + j,:)',data((i-1)*NM +j,:)','T',273 + Tin - (i-1)*Tstep,'Nrun',6);
-        [tau,MSD,ACF]=DLS_CRIEAnalysis(t((i-1)*NM + j,:)',data((i-1)*NM +j,:)','T',273 + Tin + Trend*(i-1)*Tstep,'batch',0,'cut',0.1);
-        save([PathName,'T_',num2str(Tin + Trend*(i-1)*Tstep),'_',num2str(j)],'tau','ACF','MSD');
+        [tau,MSD,ACF,tau_Long,ACF_Long]=DLS_CRIEAnalysis_Simple(t((i-1)*NM + j,:)',data((i-1)*NM +j,:)','T',273 + Tin + Trend*(i-1)*Tstep,'cut',0.05);
+        save([PathName,'T_',num2str(Tin + Trend*(i-1)*Tstep),'_',num2str(j)],'tau','ACF','tau_Long','ACF_Long','MSD');
     end
 end
