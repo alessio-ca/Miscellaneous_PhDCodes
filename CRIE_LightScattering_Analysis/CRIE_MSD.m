@@ -204,6 +204,8 @@ elseif Igrid == 2
     g_min = log10(g_min);
     g_max = log10(g_max);
     g = linspace(g_min,g_max,Ng);
+elseif Igrid == 3
+    [g,wLag] = GaussLaguerre(Ng,0);
 else
     error('Unknown grid specification. Check the parameter "Igrid".');
 end
@@ -218,6 +220,8 @@ elseif Iquad == 2
     c = c(:);
     h = (g(end) - g(1))/(Ng-1);
     c = (h/3)*[1;c;4;2];
+elseif Iquad == 3
+    c = wLag;
 else
     error('Unknown quadrature specification. Check the parameter "Iquad".');
 end
@@ -236,16 +240,22 @@ if Kernel == 1
     if Igrid == 2
         A = cM.*(log(10)*10.^(gM)).*exp(-tM.*10.^(gM));
         Coeff = c.*(log(10)*10.^(g));
-    else
+    elseif Igrid == 1
         A = cM.*exp(-tM.*gM);
+        Coeff = c;
+    else 
+        A = (cM./tM);
         Coeff = c;
     end
 elseif Kernel == 2
     if Igrid == 2
         A = cM.*(log(10)*10.^(gM)).*(1 - exp(-tM.*10.^(gM)));
         Coeff = c.*(log(10)*10.^(g));
-    else
+    elseif Igrid == 1
         A = cM.*(1 - exp(-tM.*gM));
+        Coeff = c;
+    else
+        A = - (cM./tM);
         Coeff = c;
     end
 else
@@ -253,6 +263,9 @@ else
         if Igrid == 2
             A = cM.*(log(10)*10.^(gM)).*Kernel;
             Coeff = c.*(log(10)*10.^(g));
+        elseif Igrid == 1
+            A = cM.*Kernel;
+            Coeff = c;
         else
             A = cM.*Kernel;
             Coeff = c;
@@ -319,7 +332,9 @@ R = [R,zeros(Nreg,Nl)]; %Do not regularize the constant term
 
 %% Treatment of user input
 if  UserL  == 1
-    if Nbg == 2 %Linear background condition
+    if Nbg == 3 %Linear and constant background condition
+        A = [A,repmat(t,1,1),repmat(ones(Ny,1),1)]; %Add Nl columns of t's to the Kernel.
+    elseif Nbg == 2 %Linear background condition
         A = [A,repmat(t,1,Nl)]; %Add Nl columns of t's to the Kernel.
     elseif Nbg == 1 %Constant background condition
         A = [A,repmat(ones(Ny,1),1,Nl)]; %Add Nl columns of 1's to the Kernel.
@@ -347,7 +362,9 @@ if Ny0 == 1
     else
         Aeq = (c.*(log(10)*10.^(g)))'; 
     end
-    if Nbg == 2
+    if Nbg == 3
+        Aeq = [Aeq,1,zeros(1,Nl),ones(1,Nl)];
+    elseif Nbg == 2
         Aeq = [Aeq,1,zeros(1,Nl)]; %y(0) = 1 constraint + bg terms (linear)
     elseif Nbg == 1
         Aeq = [Aeq,1,ones(1,Nl)]; %y(0) = 1 constraint + bg terms (constant)
@@ -415,14 +432,13 @@ for i = 1:Nalpha
     end
     progressbar(i/Nalpha);
 end
-sol = nonzeros(sol);
-Lx = nonzeros(Lx);
+sol = unique(sol);
+Lx = unique(Lx);
 lambdaV = nonzeros(lambdaV);
 % Corner of L_curve and recalculation with optimal alpha
-if isempty(Lx)
-    warning('CRIE:warnings', 'Optimal lambda has not been individuated. Selecting highest lambda in list.');
-    index = length(lambdaV);
-    k_c = index;
+if (isempty(Lx) || (length(sol) ~= length(Lx)))
+    warning('CRIE:warnings', 'Optimal lambda has not been individuated. Selecting lowest lambda in list.');
+    k_c = lambdaV(1);
 else
     [k_c,sol_c,Lx_c] =  CRIE_corner(sol,Lx,lambdaV,rho_max,eta_max);
 end
@@ -487,7 +503,8 @@ xlabel('s')
 ylabel('g(s)')
 
 subplot(2,2,4)
-if ~isempty(Lx)
+if ~(isempty(Lx) || (length(sol) ~= length(Lx)))
+
     %    loglog(sol,Lx,'k--o')
     %    hold on
     %    loglog([min(sol) - 0.2*(max(sol) - min(sol)),sol(index)],[Lx(index),Lx(index)],':r',...
